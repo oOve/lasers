@@ -13,9 +13,9 @@ Both the mirrors and lightsources are tokens, and they are thus compatible with 
 
 The players does not need to have permissions to any of the tokens. If you install ["pushable"](https://github.com/oOve/pushable) tokens your players can push the mirrors or light-sources around.
 
-The light tokens will create multiple extra light tokens that act as each reflection. It can happen that the light looses them instead of deleting them automatically. If they do, you can manually select and delete them. The image for the reflecting light token is 💢 . If you wish to change this default image, you'l find it in the module's folder under media.
+The light tokens will create multiple extra light tokens that act as each reflection. It can happen that the light looses them instead of deleting them automatically. If they do, you can manually select and delete them. The image for the reflecting light token is <img src="media/anger.png" width="100">. If you wish to change this default image, you'l find it in the module's folder under media.
 
-![]("media/demo.webm")
+![demo video]("media/demo.webm")
 
 Both the light source and the mirrors create a small wall behind them. This wall will be rotated and moved along with the token (and deleted when the token is deleted). It may happen that these walls are left behind, in that case, manually delete them.
 
