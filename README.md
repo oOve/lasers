@@ -25,3 +25,7 @@ Both the light source and the mirrors create a small wall behind them. This wall
  * Colored lights, and the possibility for filters, that change the color of the light along its path.
  * Probably bug-fixing
 
+
+Do you like this module?; then please support me at [Patreon](https://www.patreon.com/drO_o).
+
+Would you like to show off your creations or ask questions about the module feel free to drop in at my [discord channel](https://discord.gg/5CCAhsKFDp). 
