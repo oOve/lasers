@@ -346,6 +346,7 @@ Hooks.on("renderTokenConfig", (app, html) => {
   // Create a new form group
   const formGroup = document.createElement("div");
   formGroup.classList.add("form-group");
+  formGroup.classList.add("slim");
 
   // Create a label for this setting
   const label = document.createElement("label");
@@ -356,6 +357,10 @@ Hooks.on("renderTokenConfig", (app, html) => {
   const formFields = document.createElement("div");
   formGroup.classList.add("form-fields");
   formGroup.append(formFields);
+
+  const label1 = document.createElement('label');
+  label1.textContent = 'Is lamp:';
+  formFields.append(label1);
 
   // Create a lamp input box
   const input = document.createElement("input");
@@ -368,6 +373,10 @@ Hooks.on("renderTokenConfig", (app, html) => {
     input.checked=true;
   }
   
+  const label2 = document.createElement('label');
+  label2.textContent = 'Is mirror:';
+  formFields.append(label2);
+
   // Create mirror input box
   const mirr = document.createElement("input");
   mirr.name = "flags.lasers.is_mirror";
