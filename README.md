@@ -20,8 +20,8 @@ The light tokens will create multiple extra light tokens that act as each reflec
 Both the light source and the mirrors create a small wall behind them. This wall will be rotated and moved along with the token (and deleted when the token is deleted). It may happen that these walls are left behind, in that case, manually delete them.
 
 ## TODO:
- * Implemnent support for Monks Active tiles, so that light beams can trigger them. As far as today, there is no interaction outside this module of the lightbeams. 
- * The current version use Foundry's default light, or beams that are a slice of a circular (pie slices) light model. Future implementation should introduce paralell beams of light.
+ * Implement support for Monks Active tiles, so that light beams can trigger them. As far as today, there is no interaction outside this module of the light-beams. 
+ * The current version use Foundry's default light, or beams that are a slice of a circular (pie slices) light model. Future implementation should introduce parallel beams of light.
  * Colored lights, and the possibility for filters, that change the color of the light along its path.
  * Probably bug-fixing
 
