@@ -12,11 +12,11 @@
  */
 
 
-let module_name = "lasers";
+let MOD_NAME = "lasers";
 let laser_socket;
 Hooks.once("socketlib.ready", () => {
   // socketlib is activated, lets register our function moveAsGM
-	laser_socket = socketlib.registerModule(module_name);		
+	laser_socket = socketlib.registerModule(MOD_NAME);		
 });
 
 let laser_light = {
@@ -58,7 +58,7 @@ function mirrorAtPoint(p){
         p.x < tok.data.x+tok.hitArea.width &&
         p.y > tok.data.y &&
         p.y < tok.data.y+tok.hitArea.height &&
-        tok.document.getFlag(module_name, 'is_mirror')
+        tok.document.getFlag(MOD_NAME, 'is_mirror')
         ){
           return tok;
         }
@@ -77,12 +77,12 @@ function reflect(vec, norm){
 }
 
 function isTokenMirror(tok){
-  if (hasProperty(tok, 'getFlag')) return tok.getFlag(module_name, 'is_mirror');
-  return tok.document.getFlag(module_name, 'is_mirror'); 
+  if (hasProperty(tok, 'getFlag')) return tok.getFlag(MOD_NAME, 'is_mirror');
+  return tok.document.getFlag(MOD_NAME, 'is_mirror'); 
 }
 
 function updateBackWall(token){
-  let back_wall_id = token.document.getFlag(module_name, "back_wall");
+  let back_wall_id = token.document.getFlag(MOD_NAME, "back_wall");
   let back_wall = canvas.walls.get(back_wall_id);
   let w = token.hitArea.width;
  
@@ -116,7 +116,7 @@ function updateBackWall(token){
     // create it    
     canvas.scene.createEmbeddedDocuments("Wall", [wall_data] ).then( (wall)=> {
       //console.log("As promised: ", wall);
-      token.document.setFlag(module_name, "back_wall", wall[0].id);
+      token.document.setFlag(MOD_NAME, "back_wall", wall[0].id);
     });
   }else{    
     // update it
@@ -126,12 +126,12 @@ function updateBackWall(token){
 }
 
 function checkMirrorsMove(pos){
-  let lights = canvas.tokens.placeables.filter(t=>(t.document.getFlag(module_name, 'is_lamp') ))
+  let lights = canvas.tokens.placeables.filter(t=>(t.document.getFlag(MOD_NAME, 'is_lamp') ))
   let lights_affected = new Set();
   let uv = coord2uv(pos.x, pos.y);
   
   for (let light of lights){
-    let rchain = new Set(light.document.getFlag(module_name, 'ray_chain'));    
+    let rchain = new Set(light.document.getFlag(MOD_NAME, 'ray_chain'));    
     if (rchain.has(uv)){
       lights_affected.add(light.id);
     }
@@ -201,7 +201,7 @@ function traceLight(start, dir, chain, lights){
         }        
         lights.push(mirrored_light_data);        
         
-        if (chain.length<game.settings.get(module_name, "ray_length")){
+        if (chain.length<game.settings.get(MOD_NAME, "ray_length")){
           // And on we go
           traceLight(tkp.center, r_vec, chain, lights);
         }
@@ -247,7 +247,7 @@ function updateLamp(lamp, change){
   //console.log("Tracing lights(",lights.length,")", chain);
 
   // Existing lights
-  let old_lights = lamp.document.getFlag(module_name, 'lights');
+  let old_lights = lamp.document.getFlag(MOD_NAME, 'lights');
 
   // Creat lights if neccesarry:
   let mirrored_light_promise = canvas.scene.createEmbeddedDocuments("Token", lights );
@@ -259,10 +259,10 @@ function updateLamp(lamp, change){
   }
 
   // Keep the trace chain
-  lamp.document.setFlag(module_name, 'ray_chain', chain);
+  lamp.document.setFlag(MOD_NAME, 'ray_chain', chain);
   // And, finally keep the new lights (tokens)
   mirrored_light_promise.then((new_lights)=>{
-    lamp.document.setFlag(module_name, 'lights', new_lights.map((l)=>{return l.id;}));
+    lamp.document.setFlag(MOD_NAME, 'lights', new_lights.map((l)=>{return l.id;}));
   });
 }
 
@@ -283,7 +283,7 @@ Hooks.on('preUpdateToken', (token, change, options, user_id)=>{
 
   let sz2 = canvas.grid.size/2;
   // We need to also notify change if a mirror moves out of an 'active' ray  
-  if (token.getFlag(module_name,'is_mirror') && isChangeTransform(change)){
+  if (token.getFlag(MOD_NAME,'is_mirror') && isChangeTransform(change)){
     let pos = {x:token.data.x+sz2, y:token.data.y+sz2};
     let lights_affected = checkMirrorsMove(pos); 
     
@@ -297,14 +297,14 @@ Hooks.on('preUpdateToken', (token, change, options, user_id)=>{
 Hooks.on('deleteToken', (token, options, user_id)=>{
   if (!game.user.isGM)return true;
 
-  let is_lamp = token.getFlag(module_name, 'is_lamp');
-  let is_mirr = token.getFlag(module_name, 'is_mirror');
+  let is_lamp = token.getFlag(MOD_NAME, 'is_lamp');
+  let is_mirr = token.getFlag(MOD_NAME, 'is_mirror');
   if (is_lamp||is_mirr){
-      let bcw = token.getFlag(module_name, 'back_wall');
+      let bcw = token.getFlag(MOD_NAME, 'back_wall');
       if (bcw){canvas.scene.deleteEmbeddedDocuments("Wall", [bcw]);}
 
       if (is_lamp){
-        let lights = token.getFlag(module_name, 'lights');
+        let lights = token.getFlag(MOD_NAME, 'lights');
         if (lights){canvas.scene.deleteEmbeddedDocuments(lights);}
       } else { // is mirror
         // TODO: Notify lights if this mirror is in active chain
@@ -318,10 +318,10 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
   if (!game.user.isGM)return true;
 
   if (isChangeTransform(change) || hasProperty(options, 'lights_affected')){  
-    if (token.getFlag(module_name, 'is_lamp')){
+    if (token.getFlag(MOD_NAME, 'is_lamp')){
       updateLamp(canvas.tokens.get(token.id), change);
     }
-    if (token.getFlag(module_name, 'is_mirror') ){
+    if (token.getFlag(MOD_NAME, 'is_mirror') ){
       updateMirror( canvas.tokens.get(token.id), change, options);
     }
   }
@@ -330,7 +330,7 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
 
 // Settings:
 Hooks.once("init", () => {    
-  game.settings.register(module_name, "ray_length", {
+  game.settings.register(MOD_NAME, "ray_length", {
     name: "Max ray length",
     hint: "The maximum lenth we trace a light ray, in grid cells",
     scope: 'world',
@@ -339,6 +339,28 @@ Hooks.once("init", () => {
     default: 100
   });  
 });
+
+
+
+
+function createCheckBox(app, fields, data_name, title, hint){
+  
+  const label = document.createElement('label');
+  label.textContent = title; 
+  const input = document.createElement("input");
+  input.name = 'flags.'+MOD_NAME+'.' + data_name;
+  input.type = "checkbox";
+  input.title = hint;
+  
+  if (app.token.getFlag(MOD_NAME, data_name)){
+    input.checked = "true";
+  }
+
+  fields.append(label);
+  fields.append(input);
+}
+
+
 
 
 // Hook into the token config render
@@ -355,41 +377,12 @@ Hooks.on("renderTokenConfig", (app, html) => {
 
   // Create a form fields container
   const formFields = document.createElement("div");
-  formGroup.classList.add("form-fields");
+  formFields.classList.add("form-fields");
   formGroup.append(formFields);
 
-  const label1 = document.createElement('label');
-  label1.textContent = 'Is lamp:';
-  formFields.append(label1);
-
-  // Create a lamp input box
-  const input = document.createElement("input");
-  input.name = "flags.lasers.is_lamp";
-  input.type = "checkbox";
-  input.title = 'Is this a lamp/laser';
-  formFields.append(input);  
-  // Insert the flags current value into the input box  
-  if (app.token.getFlag(module_name, 'is_lamp')){
-    input.checked=true;
-  }
+  createCheckBox(app, formFields, 'is_lamp', 'Is Lamp', 'Check true to indicate that this is a lamp.');
+  createCheckBox(app, formFields, 'is_mirror', "Is Mirror", "Check true to indicate that this is a mirror.");
   
-  const label2 = document.createElement('label');
-  label2.textContent = 'Is mirror:';
-  formFields.append(label2);
-
-  // Create mirror input box
-  const mirr = document.createElement("input");
-  mirr.name = "flags.lasers.is_mirror";
-  mirr.type = "checkbox";
-  mirr.title = 'Is this a mirror';
-  formFields.append(mirr);  
-  // Insert the flags current value into the input box  
-  //if ((app.object.data.flags.lasers)&&(app.object.data.flags.lasers.is_mirror)){ m
-  
-  if ( app.token.getFlag(module_name, 'is_mirror')){
-    mirr.checked="true";
-  } //lets take the long way around
-
   // Add the form group to the bottom of the Identity tab
   html[0].querySelector("div[data-tab='character']").append(formGroup);
 
