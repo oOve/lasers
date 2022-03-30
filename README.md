@@ -5,11 +5,14 @@ Both the mirrors and lightsources are tokens, and they are thus compatible with 
 ## Help:
  * Create a token that has the image of your desired light source. The image must be rotated so that the light comes out in the down direction. 
  * Edit the token (1), and in the configuration click the leftmost of the two checkboxes (2), to indicate that this is your light.
+ * In the light settings of your lamp, style your lightsource to your heart's desire. Remember to set the Emission Angle to a narrow ray, e.g., 5 Degrees.
  * Create another token, and choose an image of a mirror. The reflecting side should also point downward.
- * Edit the token (1), and select the rightmost checkbox, denoting this as a mirror.
+ * Edit the token (1), and select the rightmost checkbox (3), denoting this as a mirror.
  * Rotate tokens, to your desired position, or better yet, install Monks Active tiles, and create buttons that your players can interact with.
 
-<img src="media/laser_settings_help.png" width="400">
+![image](https://user-images.githubusercontent.com/8543541/160940062-3a61394f-8ac1-4026-8e23-42394705bbd9.png)
+
+![image](https://user-images.githubusercontent.com/8543541/160940569-14390d0a-dd05-4905-b72d-3dfc242eb86c.png)
 
 The players does not need to have permissions to any of the tokens. If you install ["pushable"](https://github.com/oOve/pushable) tokens your players can push the mirrors or light-sources around.
 
