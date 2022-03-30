@@ -13,11 +13,6 @@
 
 
 let MOD_NAME = "lasers";
-let laser_socket;
-Hooks.once("socketlib.ready", () => {
-  // socketlib is activated, lets register our function moveAsGM
-	laser_socket = socketlib.registerModule(MOD_NAME);		
-});
 
 let laser_light = {
   angle:5,
@@ -145,9 +140,8 @@ function updateMirror(token, change, options){
   let lights_affected = checkMirrorsMove(token.center); 
   lights_affected = unionSet(lights_affected, new Set(options.lights_affected));
 
-  for (light of lights_affected){    
+  for (let light of lights_affected){    
     let l = canvas.tokens.get(light);
-    //l.document.update({'flags.lasers.forced':createGUID()});   
     updateLamp(l);
   }
 }
@@ -185,7 +179,7 @@ function traceLight(start, dir, chain, lights){
         let m_nvec =  {x:Math.sin(rn), y:Math.cos(rn)};
 
         // Lets reflect this vector
-        r_vec = reflect(dir, m_nvec);
+        let r_vec = reflect(dir, m_nvec);
                 
         // vec to rotation
         let lrot = -Math.atan2(r_vec.x, r_vec.y) * 180 / Math.PI;
@@ -226,13 +220,12 @@ function isChangeTransform(change){
 }
 
 
-
 function updateLamp(lamp, change){
   let chain = [];
   let lights = [];
   
   // Turn on the light on this lamp
-  lamp.document.update({light:laser_light});
+  //lamp.document.update({light:laser_light});
   updateBackWall(lamp);
 
   // Starting point at the center of the lamp
@@ -249,6 +242,11 @@ function updateLamp(lamp, change){
   // Existing lights
   let old_lights = lamp.document.getFlag(MOD_NAME, 'lights');
 
+  // Replace mirror lights with this lamps settings.
+  for (let l of lights){
+    l.light = duplicate(lamp.data.light);
+  }
+
   // Creat lights if neccesarry:
   let mirrored_light_promise = canvas.scene.createEmbeddedDocuments("Token", lights );
   
@@ -264,16 +262,6 @@ function updateLamp(lamp, change){
   mirrored_light_promise.then((new_lights)=>{
     lamp.document.setFlag(MOD_NAME, 'lights', new_lights.map((l)=>{return l.id;}));
   });
-}
-
-function createGUID() {
-  function random() {
-    return Math.floor((1 + Math.random()) * 0x10000)
-      .toString(16)
-      .substring(1);
-  }
-  return random() + random() + '-' + random() + '-' + random() + '-' +
-    random() + '-' + random() + random() + random();
 }
 
 
@@ -312,6 +300,20 @@ Hooks.on('deleteToken', (token, options, user_id)=>{
   }
 });
 
+Hooks.on('createToken', (token, options, user_id)=>{
+  if (!game.user.isGM)return true;
+
+  if(token.getFlag(MOD_NAME, 'is_lamp')){
+    // Check for default settings.
+    if (token.data.light.angle == 360){
+      console.log("Found, default light settings, replacing with 'laser settings'");
+      token.update({light:laser_light});
+    }
+  }
+});
+
+
+
 
 // Let's grab those token updates
 Hooks.on('updateToken', (token, change, options, user_id)=>{
@@ -337,7 +339,54 @@ Hooks.once("init", () => {
     config: true,
     type: Number,
     default: 100
+  });
+
+
+  /*
+  game.settings.register(MOD_NAME, "ray_width", {
+    name: "The ray spread",
+    hint: "The width / spread of the ray, purely visual.",
+    scope: 'world',
+    config: true,
+    type: Number,
+    default: 5
+  });
+  game.settings.register(MOD_NAME, "ray_reach", {
+    name: "Visual light lenght",
+    hint: "The length of the ligth, purely visual. Setting this too long, will have the light visually start later.",
+    scope: 'world',
+    config: true,
+    type: Number,
+    default: 100
   });  
+  game.settings.register(MOD_NAME, "ray_luminosity", {
+    name: "Light Luminosity",
+    hint: "The length of the ligth, purely visual. Setting this too long, will have the light visually start later.",
+    scope: 'world',
+    config: true,
+    type: Number,
+    default: 0.6,
+    range: {             // If range is specified, the resulting setting will be a range slider
+      min: 0,
+      max: 1,
+      step: 0.1
+    }
+  });
+  */
+ // luminosity: 0.6,
+  
+
+  
+  /*
+  game.settings.register(MOD_NAME, "dual_lights", {
+    name: "Dual Lights",
+    hint: "Create light sources in 'both' directions, looks better, but can in some cases create artifacts",
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true
+  });
+  */
 });
 
 
