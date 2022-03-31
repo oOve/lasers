@@ -1,4 +1,4 @@
-# lasers
+# lasers - light-beams and mirrors
 FoundryVTT module for lasers, or light-beams that can be reflected using mirrors. This preliminary beta version implements mirrrors and light sources that interact with each other.
 Both the mirrors and lightsources are tokens, and they are thus compatible with pushable tokens.
 
