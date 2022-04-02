@@ -164,7 +164,6 @@ function traceLight(start, dir, chain, lights){
       break;
     }
     // Lets push it to the chain
-    //chain_push( chain, (ray.B.x/gs).toFixed(), (ray.B.y/gs).toFixed() );
     chain.push(coord2uv(ray.B.x, ray.B.y));
     
     // We haven't hit a wall, yet
@@ -374,9 +373,7 @@ Hooks.once("init", () => {
   });
   */
  // luminosity: 0.6,
-  
-
-  
+    
   /*
   game.settings.register(MOD_NAME, "dual_lights", {
     name: "Dual Lights",
@@ -404,7 +401,6 @@ function createCheckBox(app, fields, data_name, title, hint){
   if (app.token.getFlag(MOD_NAME, data_name)){
     input.checked = "true";
   }
-
   fields.append(label);
   fields.append(input);
 }
@@ -429,9 +425,10 @@ Hooks.on("renderTokenConfig", (app, html) => {
   formFields.classList.add("form-fields");
   formGroup.append(formFields);
 
-  createCheckBox(app, formFields, 'is_lamp', 'Is Lamp', 'Check true to indicate that this is a lamp.');
-  createCheckBox(app, formFields, 'is_mirror', "Is Mirror", "Check true to indicate that this is a mirror.");
-  
+  createCheckBox(app, formFields, 'is_lamp',   'Lamp',   'Check true to indicate that this is a lamp.');
+  createCheckBox(app, formFields, 'is_mirror', 'Mirror', 'Check true to indicate that this is a mirror.');
+  createCheckBox(app, formFields, 'is_sensor', 'Sensor', 'Check true to indicate this as a light sensor.');
+
   // Add the form group to the bottom of the Identity tab
   html[0].querySelector("div[data-tab='character']").append(formGroup);
 
