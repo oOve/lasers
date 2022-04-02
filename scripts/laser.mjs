@@ -13,6 +13,7 @@
 
 
 let MOD_NAME = "lasers";
+let LANG_PRE = "LASERS";
 
 /**
  * Get translated string
@@ -20,7 +21,7 @@ let MOD_NAME = "lasers";
  * @returns {String} Translated string
  */
 function lang(key){
-  return game.i18n.localize(MOD_NAME+'.'+key);
+  return game.i18n.localize(LANG_PRE+'.'+key);
 }
 
 // Default light, 
@@ -177,8 +178,9 @@ function traceLight(start, dir, chain, lights){
     
     // We haven't hit a wall, yet
     // look for a token/mirror here
-    let tkp = mirrorAtPoint(ray.B);
-    if (tkp){
+    let tkps = mirrorAtPoint(ray.B);
+    if (tkps.length){
+      let tkp = tkps[0]; // #TODO: Fix this...later
       // We found a mirror
       let rn = Math.toRadians(-tkp.data.rotation);
       // The mirrors N vec
