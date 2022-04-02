@@ -14,6 +14,16 @@
 
 let MOD_NAME = "lasers";
 
+/**
+ * Get translated string
+ * @param {String} key The key of the text string within this module you wish to fetch
+ * @returns {String} Translated string
+ */
+function lang(key){
+  return game.i18n.localize(MOD_NAME+'.'+key);
+}
+
+// Default light, 
 let laser_light = {
   angle:5,
   bright:100,
@@ -75,6 +85,11 @@ function isTokenMirror(tok){
   if (hasProperty(tok, 'getFlag')) return tok.getFlag(MOD_NAME, 'is_mirror');
   return tok.document.getFlag(MOD_NAME, 'is_mirror'); 
 }
+function isTokenSensor(tok){
+  if (hasProperty(tok, 'getFlag')) return tok.getFlag(MOD_NAME, 'is_sensor');
+  return tok.document.getFlag(MOD_NAME, 'is_sensor'); 
+}
+
 
 function updateBackWall(token){
   let back_wall_id = token.document.getFlag(MOD_NAME, "back_wall");
@@ -110,12 +125,10 @@ function updateBackWall(token){
   if (back_wall == null){
     // create it    
     canvas.scene.createEmbeddedDocuments("Wall", [wall_data] ).then( (wall)=> {
-      //console.log("As promised: ", wall);
       token.document.setFlag(MOD_NAME, "back_wall", wall[0].id);
     });
   }else{    
     // update it
-    //console.log("Updating wall:", back_wall, wall_data);
     back_wall.document.update(wall_data);
   }
 }
@@ -140,16 +153,23 @@ function updateMirror(token, change, options){
   let lights_affected = checkMirrorsMove(token.center); 
   lights_affected = unionSet(lights_affected, new Set(options.lights_affected));
 
-  for (let light of lights_affected){    
+  for (let light of lights_affected){
     let l = canvas.tokens.get(light);
     updateLamp(l);
   }
 }
 
+/**
+ * Convert from canvas coords to grid cell coords
+ * @param {Number} x 
+ * @param {Number} y 
+ * @returns {String} Comma separated string with U and V, grid cell coordinates
+ */
 function coord2uv(x, y){
   let gs = canvas.grid.size;
   return Math.floor(x/gs) + ',' + Math.floor(y/gs);
 }
+
 
 function traceLight(start, dir, chain, lights){
   let gs = canvas.grid.size;  
@@ -159,7 +179,12 @@ function traceLight(start, dir, chain, lights){
 
   for (let i = 1; i < 128; ++i){
     ray.B.x = start.x + i*gs*dir.x;
-    ray.B.y = start.y + i*gs*dir.y;            
+    ray.B.y = start.y + i*gs*dir.y;
+    // Checking against movement collision is not quite right
+    // This is a work-around for the 'early exit' we do here
+    // FIXME: move to more excact collision testing.
+    // The problem is that the mirrors have "back walls", that if 
+    // we are unlucky will stop the reflection.
     if (canvas.walls.checkCollision(ray, {type:'movement'})){
       break;
     }
@@ -170,7 +195,7 @@ function traceLight(start, dir, chain, lights){
     // look for a token/mirror here
     let tkp = mirrorAtPoint(ray.B);
     if (tkp!=null){
-      //console.log("We found a token", tkp);
+      
       if (isTokenMirror(tkp)){
         // We found a mirror
         let rn = Math.toRadians(-tkp.data.rotation);
@@ -223,8 +248,7 @@ function updateLamp(lamp, change){
   let chain = [];
   let lights = [];
   
-  // Turn on the light on this lamp
-  //lamp.document.update({light:laser_light});
+  // Update its wall
   updateBackWall(lamp);
 
   // Starting point at the center of the lamp
@@ -236,7 +260,6 @@ function updateLamp(lamp, change){
 
   // And lets go
   traceLight(start, dir, chain, lights);
-  //console.log("Tracing lights(",lights.length,")", chain);
 
   // Existing lights
   let old_lights = lamp.document.getFlag(MOD_NAME, 'lights');
@@ -305,7 +328,7 @@ Hooks.on('createToken', (token, options, user_id)=>{
   if(token.getFlag(MOD_NAME, 'is_lamp')){
     // Check for default settings.
     if (token.data.light.angle == 360){
-      console.log("Found, default light settings, replacing with 'laser settings'");
+      console.warn("Creating light, found default light settings, replacing with 'laser settings'");
       token.update({light:laser_light});
     }
   }
@@ -332,48 +355,23 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
 // Settings:
 Hooks.once("init", () => {    
   game.settings.register(MOD_NAME, "ray_length", {
-    name: "Max ray length",
-    hint: "The maximum lenth we trace a light ray, in grid cells",
+    name: lang('ray'),
+    hint: lang('ray_hint'),
     scope: 'world',
     config: true,
     type: Number,
     default: 100
   });
+  game.settings.register(MOD_NAME, "activate_MATT", {
+    name: lang('matt'),
+    hint: lang('matt_hint'),
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true
+  });
 
 
-  /*
-  game.settings.register(MOD_NAME, "ray_width", {
-    name: "The ray spread",
-    hint: "The width / spread of the ray, purely visual.",
-    scope: 'world',
-    config: true,
-    type: Number,
-    default: 5
-  });
-  game.settings.register(MOD_NAME, "ray_reach", {
-    name: "Visual light lenght",
-    hint: "The length of the ligth, purely visual. Setting this too long, will have the light visually start later.",
-    scope: 'world',
-    config: true,
-    type: Number,
-    default: 100
-  });  
-  game.settings.register(MOD_NAME, "ray_luminosity", {
-    name: "Light Luminosity",
-    hint: "The length of the ligth, purely visual. Setting this too long, will have the light visually start later.",
-    scope: 'world',
-    config: true,
-    type: Number,
-    default: 0.6,
-    range: {             // If range is specified, the resulting setting will be a range slider
-      min: 0,
-      max: 1,
-      step: 0.1
-    }
-  });
-  */
- // luminosity: 0.6,
-    
   /*
   game.settings.register(MOD_NAME, "dual_lights", {
     name: "Dual Lights",
@@ -389,8 +387,7 @@ Hooks.once("init", () => {
 
 
 
-function createCheckBox(app, fields, data_name, title, hint){
-  
+function createCheckBox(app, fields, data_name, title, hint){  
   const label = document.createElement('label');
   label.textContent = title; 
   const input = document.createElement("input");
@@ -425,9 +422,18 @@ Hooks.on("renderTokenConfig", (app, html) => {
   formFields.classList.add("form-fields");
   formGroup.append(formFields);
 
-  createCheckBox(app, formFields, 'is_lamp',   'Lamp',   'Check true to indicate that this is a lamp.');
-  createCheckBox(app, formFields, 'is_mirror', 'Mirror', 'Check true to indicate that this is a mirror.');
-  createCheckBox(app, formFields, 'is_sensor', 'Sensor', 'Check true to indicate this as a light sensor.');
+  createCheckBox(app, formFields, 'is_lamp',   lang('lightsource'), lang('light_hint'));
+  createCheckBox(app, formFields, 'is_mirror', lang('mirror'),      lang('mirror_hint'));
+  createCheckBox(app, formFields, 'is_sensor', lang('sensor'),      lang('sensor_hint'));
+
+  const mname = document.createElement('input');
+  mname.name = 'flags.'+MOD_NAME+'.macro_name';
+  mname.type = 'text';
+  mname.placeholder = lang('macro_name');
+  mname.hint        = lang('macro_hint');
+  mname.value = app.token.getFlag(MOD_NAME, 'macro_name');
+  formFields.append(mname);
+
 
   // Add the form group to the bottom of the Identity tab
   html[0].querySelector("div[data-tab='character']").append(formGroup);

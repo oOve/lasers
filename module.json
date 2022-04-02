@@ -6,10 +6,10 @@
     "minimumCoreVersion": "9",
     "compatibleCoreVersion": "9",
     "author": "o_Ove",
-	"authors": [{
-		"name": "o_Ove",
-		"discord": "Ove#4315",
-		"patreon": "https://www.patreon.com/drO_o"
+	  "authors": [{
+      "name": "o_Ove",
+      "discord": "Ove#4315",
+      "patreon": "https://www.patreon.com/drO_o"
     }],
     "dependencies":[],
     "socket": false,
@@ -17,7 +17,13 @@
     "url": "https://github.com/oOve/lasers",
     "download": "https://github.com/oOve/lasers/archive/1.0.0.zip",
     "manifest": "https://github.com/oOve/lasers/releases/latest/download/module.json",
-
+    "languages": [
+      {
+        "lang": "en",
+        "name": "English",
+        "path": "lang/en.json"
+      }
+    ],
     "license": "LICENSE",
     "readme": "README.md",
     "styles":[],

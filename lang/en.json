@@ -1,0 +1,18 @@
+{
+    "LASERS.lightsource"   : "light source",
+    "LASERS.mirror"        : "mirror",
+    "LASERS.sensor"        : "sensor",
+    "LASERS.light_hint"    : "Check box to indicate that this token is a light source",
+    "LASERS.mirror_hint"   : "Check box to indicate that this token is a mirror",
+    "LASERS.sensor_hint"   : "Check box to indicate that this token is a sensor.",
+   
+    "LASERS.macro_name"    : "macro name",
+    "LASERS.macro_hint"    : "The macro to execute when the number of light-sources at this sensor changes",
+  
+    "LASERS.ray"           : "Light Ray Length",
+    "LASERS.ray_hint"      : "The maximum lenth we trace a light ray, in grid cells",
+
+    "LASERS.matt"          : "Activate Active Tile Triggers", 
+    "LASERS.matt_hint"     : "Activate 'Monks Active Tile Triggers' on sensor change. Requires the MATT module installed.",
+
+}
