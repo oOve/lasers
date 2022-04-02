@@ -47,7 +47,14 @@ function unionSet(setA, setB) {
 
 // Returns the set of all tokens at point p
 function tokenAtPoint(p){
-  return canvas.tokens.quadtree.getObjects( new NormalizedRectangle( p.x-5, p.y-5, 10, 10 ) );
+  let potential_hits = canvas.tokens.quadtree.getObjects( new NormalizedRectangle( p.x-5, p.y-5, 10, 10 ) );
+  let hits = [...potential_hits].filter((token)=>{
+    return (p.x > token.x) &&
+           (p.x < token.x+token.hitArea.width) &&
+           (p.y > token.y)&&
+           (p.y < token.y+token.hitArea.height);           
+  });
+  return hits;
 }
 
 // Return potential mirrors at point p
@@ -452,7 +459,8 @@ Hooks.on("renderTokenConfig", (app, html) => {
   mname.type = 'text';
   mname.placeholder = lang('macro_name');
   mname.hint        = lang('macro_hint');
-  mname.value = app.token.getFlag(MOD_NAME, 'macro_name');
+  let mn = app.token.getFlag(MOD_NAME, 'macro_name');  
+  mname.value = (mn)?mn:"";
   formFields.append(mname);
 
 
