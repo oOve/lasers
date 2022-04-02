@@ -44,32 +44,16 @@ function unionSet(setA, setB) {
 // TODO: investigate AmbientLight.prototype.refresh
 
 
-// Returns a token overlapping point 'p', return null if none exists.
+// Returns the set of all tokens at point p
 function tokenAtPoint(p){
-  for (let tok of canvas.tokens.placeables){
-    if (p.x > tok.data.x && 
-        p.x < tok.data.x+tok.hitArea.width &&
-        p.y > tok.data.y &&
-        p.y < tok.data.y+tok.hitArea.height){
-          return tok;
-        }
-  }
-  return null;
+  return canvas.tokens.quadtree.getObjects( new NormalizedRectangle( p.x-5, p.y-5, 10, 10 ) );
 }
 
+// Return potential mirrors at point p
 function mirrorAtPoint(p){
-  for (let tok of canvas.tokens.placeables){
-    if (p.x > tok.data.x && 
-        p.x < tok.data.x+tok.hitArea.width &&
-        p.y > tok.data.y &&
-        p.y < tok.data.y+tok.hitArea.height &&
-        tok.document.getFlag(MOD_NAME, 'is_mirror')
-        ){
-          return tok;
-        }
-  }
-  return null;
+  return [...tokenAtPoint(p)].filter(tok=>tok.document.getFlag(MOD_NAME, 'is_mirror'));
 }
+
 
 
 function reflect(vec, norm){
@@ -194,37 +178,36 @@ function traceLight(start, dir, chain, lights){
     // We haven't hit a wall, yet
     // look for a token/mirror here
     let tkp = mirrorAtPoint(ray.B);
-    if (tkp!=null){
+    if (tkp){
+      // We found a mirror
+      let rn = Math.toRadians(-tkp.data.rotation);
+      // The mirrors N vec
+      let m_nvec =  {x:Math.sin(rn), y:Math.cos(rn)};
+
+      // Lets reflect this vector
+      let r_vec = reflect(dir, m_nvec);
+              
+      // vec to rotation
+      let lrot = -Math.atan2(r_vec.x, r_vec.y) * 180 / Math.PI;
+
+      let mirrored_light_data = {
+        x: tkp.data.x, 
+        y: tkp.data.y,
+        hidden: false,
+        name: 'light reflected from '+tkp.id,
+        light: laser_light,
+        rotation: lrot,
+        img: 'modules/lasers/media/anger.png'
+      }        
+      lights.push(mirrored_light_data);        
       
-      if (isTokenMirror(tkp)){
-        // We found a mirror
-        let rn = Math.toRadians(-tkp.data.rotation);
-        // The mirrors N vec
-        let m_nvec =  {x:Math.sin(rn), y:Math.cos(rn)};
-
-        // Lets reflect this vector
-        let r_vec = reflect(dir, m_nvec);
-                
-        // vec to rotation
-        let lrot = -Math.atan2(r_vec.x, r_vec.y) * 180 / Math.PI;
-
-        let mirrored_light_data = {
-          x: tkp.data.x, 
-          y: tkp.data.y,
-          hidden: false,
-          name: 'light reflected from '+tkp.id,
-          light: laser_light,
-          rotation: lrot,
-          img: 'modules/lasers/media/anger.png'
-        }        
-        lights.push(mirrored_light_data);        
-        
-        if (chain.length<game.settings.get(MOD_NAME, "ray_length")){
-          // And on we go
-          traceLight(tkp.center, r_vec, chain, lights);
-        }
-        return;
+      if (chain.length<game.settings.get(MOD_NAME, "ray_length")){
+        // And on we go
+        traceLight(tkp.center, r_vec, chain, lights);
       }
+
+      // Stop the trace here, since we found a mirror
+      return;    
     }
 
   }
@@ -295,8 +278,7 @@ Hooks.on('preUpdateToken', (token, change, options, user_id)=>{
   // We need to also notify change if a mirror moves out of an 'active' ray  
   if (token.getFlag(MOD_NAME,'is_mirror') && isChangeTransform(change)){
     let pos = {x:token.data.x+sz2, y:token.data.y+sz2};
-    let lights_affected = checkMirrorsMove(pos); 
-    
+    let lights_affected = checkMirrorsMove(pos);    
     if (lights_affected.size){
       options.lights_affected = Array.from(lights_affected);
     }
@@ -322,13 +304,14 @@ Hooks.on('deleteToken', (token, options, user_id)=>{
   }
 });
 
+
 Hooks.on('createToken', (token, options, user_id)=>{
   if (!game.user.isGM)return true;
 
   if(token.getFlag(MOD_NAME, 'is_lamp')){
     // Check for default settings.
     if (token.data.light.angle == 360){
-      console.warn("Creating light, found default light settings, replacing with 'laser settings'");
+      console.warn("Creating light, found default light settings(360 degrees), replacing with 'laser settings'");
       token.update({light:laser_light});
     }
   }
@@ -370,7 +353,14 @@ Hooks.once("init", () => {
     type: Boolean,
     default: true
   });
-
+  game.settings.register(MOD_NAME, "multi_light_model", {
+    name: lang('multi_light_model'),
+    hint: lang('multi_light_model_hint'),
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false
+  });
 
   /*
   game.settings.register(MOD_NAME, "dual_lights", {
