@@ -155,8 +155,29 @@ function coord2uv(x, y){
   return Math.floor(x/gs) + ',' + Math.floor(y/gs);
 }
 
+function activateSensor(sensor, source){
+  let sensor_doc = sensor.document;
 
-function traceLight(start, dir, chain, lights){
+  //if (!sensor.getFlag(MOD_NAME, 'is_sensor'))throw "Token not a sensor!";
+  //if (!lamp.getFlag(MOD_NAME, 'is_lamp')) throw "Not a lamp recieved!";
+
+  // Fetch previously active lighs on this sensor
+  let active = new Set(sensor_doc.getFlag(MOD_NAME, 'active_lights'));
+    
+  if (!active.has(source.id)){
+    // A new light shines on this sensor
+    let active_list = Array.from(active);
+    active_list.push(source.id);
+    sensor_doc.setFlag(MOD_NAME, active_list);
+
+    let macro_name = sensor_doc.getFlag(MOD_NAME, 'macro_name');
+    let macro = game.macros.getName(macro_name);
+    if (macro){macro.execute();}
+  }
+
+}
+
+function traceLight(start, dir, chain, lights, source){
   let gs = canvas.grid.size;  
   let ray = new Ray(start, {x:0, y:0});
   
@@ -178,8 +199,16 @@ function traceLight(start, dir, chain, lights){
     
     // We haven't hit a wall, yet
     // look for a token/mirror here
-    let tkps = mirrorAtPoint(ray.B);
-    if (tkps.length){
+    let tkps = Array.from(tokenAtPoint(ray.B));
+    let mirrors = tkps.filter(tok=>tok.document.getFlag(MOD_NAME, 'is_mirror'));
+    let sensors=  tkps.filter(tok=>tok.document.getFlag(MOD_NAME, 'is_sensor'));
+    if (sensors){
+      for (let sensor of sensors){
+        activateSensor(sensor, source);
+      }
+    }
+
+    if (mirrors.length){
       let tkp = tkps[0]; // #TODO: Fix this...later
       // We found a mirror
       let rn = Math.toRadians(-tkp.data.rotation);
@@ -205,11 +234,11 @@ function traceLight(start, dir, chain, lights){
       
       if (chain.length<game.settings.get(MOD_NAME, "ray_length")){
         // And on we go
-        traceLight(tkp.center, r_vec, chain, lights);
+        traceLight(tkp.center, r_vec, chain, lights, source);
       }
 
       // Stop the trace here, since we found a mirror
-      return;    
+      return;
     }
 
   }
@@ -244,7 +273,7 @@ function updateLamp(lamp, change){
   let dir = {x:Math.sin(r), y:Math.cos(r)};
 
   // And lets go
-  traceLight(start, dir, chain, lights);
+  traceLight(start, dir, chain, lights, lamp);
 
   // Existing lights
   let old_lights = lamp.document.getFlag(MOD_NAME, 'lights');
