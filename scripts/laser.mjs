@@ -10,10 +10,12 @@
    ░       ░       ░         ░ ░  
  ░                 ░              
  */
-
+ import * as utils from "./utils.mjs";
 
 const MOD_NAME = 'lasers';
 const LANG_PRE = 'LASERS';
+
+
 
 const ACTIVE_LIGHTS = 'active_lights';
 const IS_MIRROR     = 'is_mirror';
@@ -23,6 +25,10 @@ const BACK_WALL     = 'back_wall';
 const RAY_CHAIN     = 'ray_chain';
 const MACRO_NAME    = 'macro_name';
 const LIGHTS        = 'lights';
+
+const MULTI_LIGHTS      = 'multi_lights';
+const MULTI_LIGHT_MODEL = "multi_light_model";
+
 
 /**
  * Get translated string
@@ -44,51 +50,6 @@ let laser_light = {
 };
 
 
-/**
- * @param {Set} setA 
- * @param {Set} setB 
- * @returns {Set} Union of set A and B
- */
-function setUnion(setA, setB) {
-  const union = new Set(setA);
-  for (const elem of setB) {
-      union.add(elem);
-  }
-  return union;
-}
-
-/**
- * @param {Set} setA 
- * @param {Set} setB 
- * @returns {Set} Union of set A and B
- */
-function setDifference(setA, setB) {
-  let _difference = new Set(setA)
-  for (let elem of setB) {
-      _difference.delete(elem)
-  }
-  return _difference
-}
-
-/**
- * @param {Set} setA 
- * @param {Set} setB 
- * @returns {Set} Intersection of set A and B
- */
-function setIntersection(setA, setB) {
-  let _intersection = new Set()
-  for (let elem of setB) {
-      if (setA.has(elem)) {
-          _intersection.add(elem)
-      }
-  }
-  return _intersection
-}
-
-
-
-// TODO: investigate AmbientLight.prototype.refresh
-
 
 // Returns the set of all tokens at point p
 function tokenAtPoint(p){
@@ -106,7 +67,6 @@ function tokenAtPoint(p){
 function mirrorAtPoint(p){
   return [...tokenAtPoint(p)].filter(tok=>tok.document.getFlag(MOD_NAME, IS_MIRROR));
 }
-
 
 
 function reflect(vec, norm){
@@ -170,11 +130,13 @@ function updateBackWall(token){
   }
 }
 
+
+
 function checkMirrorsMove(pos){
   let lights = canvas.tokens.placeables.filter(t=>(t.document.getFlag(MOD_NAME, IS_LAMP) ))
   let lights_affected = new Set();
   let uv = coord2uv(pos.x, pos.y);
-  
+
   for (let light of lights){
     let rchain = new Set(light.document.getFlag(MOD_NAME, RAY_CHAIN));
     if (rchain.has(uv)){
@@ -188,7 +150,7 @@ function updateMirror(token, change, options){
   updateBackWall(token);
   
   let lights_affected = checkMirrorsMove(token.center); 
-  lights_affected = setUnion(lights_affected, new Set(options.lights_affected));
+  lights_affected = utils.setUnion(lights_affected, new Set(options.lights_affected));
 
   for (let light of lights_affected){
     let l = canvas.tokens.get(light);
@@ -204,25 +166,26 @@ function updateMirror(token, change, options){
  */
 function coord2uv(x, y){
   let gs = canvas.grid.size;
-  return Math.floor(x/gs) + ',' + Math.floor(y/gs);
+  return Math.round(x/gs) + ',' + Math.round(y/gs);
 }
 
+
+// Activate / Deactivate sensors
 function activateSensor(  sensor, lamp_id){changeSensor(sensor, lamp_id, true);}
 function deactivateSensor(sensor, lamp_id){changeSensor(sensor, lamp_id, false);}
-
 function changeSensor(sensor, lamp_id, add=true){
   let sensor_doc = sensor.document;
   
   // Fetch previously active lighs on this sensor
   let active = new Set(sensor_doc.getFlag(MOD_NAME, ACTIVE_LIGHTS));
   if (add){
-    if (active.size==0){
+    if (active.size==0 && sensor.data.light.alpha==0){
       sensor_doc.update({'light.alpha':0.8});
     }
     active.add(lamp_id);
   }else{
     active.delete(lamp_id);
-    if (active.size == 0){
+    if (active.size == 0 && sensor.data.light.alpha>0){
       sensor_doc.update({'light.alpha':0.0});
     }
   }
@@ -239,6 +202,16 @@ function changeSensor(sensor, lamp_id, add=true){
 
 
 
+/**
+ * Main body, tracing the light in a straight line from the middle of a lamp.
+ * If this middle line hits a mirror on its way, 
+ * @param {Vec3} start 
+ * @param {Vec3} dir 
+ * @param {Array} chain 
+ * @param {Array} lights 
+ * @param {Array} sensors 
+ * @returns {*} Result
+ */
 function traceLight(start, dir, chain, lights, sensors){
   let gs = canvas.grid.size;  
   //let ray = new Ray(start, {x:0, y:0});
@@ -251,13 +224,16 @@ function traceLight(start, dir, chain, lights, sensors){
     //ray.B.y = start.y + i*gs*dir.y;
     let nray = new Ray(start, {x:start.x + i*gs*dir.x, y:start.y + i*gs*dir.y });
 
+    console.log("Tracing:", nray.B);
+
     // Checking against movement collision is not quite right
     // This is a work-around for the 'early exit' we do here
     // FIXME: move to more excact collision testing.
     // The problem is that the mirrors have "back walls", that if 
     // we are unlucky will stop the reflection.
     
-    if (canvas.walls.checkCollision(nray)){      
+    if (canvas.walls.checkCollision(nray)){
+      console.log( "Hit a wall, aborting");
       break;
     }
     // Lets push it to the chain
@@ -310,6 +286,8 @@ function traceLight(start, dir, chain, lights, sensors){
 
 }
 
+
+
 // Is this token change a transform that would modify its wall, or it's light direction
 function isChangeTransform(change){
   return (hasProperty(change, 'rotation')||
@@ -322,13 +300,15 @@ function isChangeTransform(change){
           ));
 }
 
-
+// Require an updated tracing path from this lamp.
 function updateLamp(lamp, change){
   let chain = [];
   let lights = [];
   
   // Update its wall
   updateBackWall(lamp);
+
+  console.log('Updating lamp', lamp);
 
   // Starting point at the center of the lamp
   let start = lamp.center;
@@ -352,13 +332,10 @@ function updateLamp(lamp, change){
   // All sensors we shone on before
   let prev_sensors = all_sensors.filter((s)=>{
       return (new Set(s.document.getFlag(MOD_NAME, ACTIVE_LIGHTS))).has(lamp.id);
-    });
+  });
 
-  //console.log("All :", all_sensors);
-  //console.log("Crnt:", current_sensors);
-  //console.log('prev:', prev_sensors);
-  let turn_off = setDifference(prev_sensors, current_sensors);
-  let turn_on  = setDifference(current_sensors, prev_sensors);
+  let turn_off = utils.setDifference(prev_sensors, current_sensors);
+  let turn_on  = utils.setDifference(current_sensors, prev_sensors);
   for (let s of turn_off){deactivateSensor(s, lamp.id);}
   for (let s of turn_on ){  activateSensor(s, lamp.id);}
 
@@ -369,9 +346,14 @@ function updateLamp(lamp, change){
   // Replace mirror lights with this lamps settings.
   for (let l of lights){
     l.light = duplicate(lamp.data.light);
+    //l.angle = 5;
+    console.log ("replacing light properties");
+    if (l.flags == undefined){l.flags = {};}
+    if(l.flags.lasers==undefined){l.flags.lasers={};};
+    l.flags.lasers.is_laser = true;
   }
 
-  // Creat lights if neccesarry:
+  // Create light-token if neccesarry:
   let mirrored_light_promise = canvas.scene.createEmbeddedDocuments("Token", lights );
   
   // Clean up old lights
@@ -389,6 +371,7 @@ function updateLamp(lamp, change){
 }
 
 
+
 // Bind to pre-update to pick up those mirrors moving away from a beam
 Hooks.on('preUpdateToken', (token, change, options, user_id)=>{
   if (!game.user.isGM)return true;
@@ -404,6 +387,7 @@ Hooks.on('preUpdateToken', (token, change, options, user_id)=>{
   }
 });
 
+
 // Delete token
 Hooks.on('deleteToken', (token, options, user_id)=>{
   if (!game.user.isGM)return true;
@@ -416,7 +400,10 @@ Hooks.on('deleteToken', (token, options, user_id)=>{
 
       if (is_lamp){
         let lights = token.getFlag(MOD_NAME, LIGHTS);
-        if (lights){canvas.scene.deleteEmbeddedDocuments(lights);}
+        if (lights && hasProperty(lights, 'length') && lights.length){
+          console.error(lights);
+          canvas.scene.deleteEmbeddedDocuments(lights);
+        }
       } else { // is mirror
         // TODO: Notify lights if this mirror is in active chain
       }      
@@ -431,11 +418,16 @@ Hooks.on('createToken', (token, options, user_id)=>{
     // Check for default settings.
     if (token.data.light.angle == 360){
       console.warn("Creating light, found default light settings(360 degrees), replacing with 'laser settings'");
-      token.update({light:laser_light});
+      
+      token.update({ 
+        light:laser_light,
+        'flags.lasers.is_laser':true
+       });
     }
+    //token.data.flags.lasers.is_laser = true;
+    //token.setFlag(MOD_NAME, 'is_laser', true);
   }
 });
-
 
 
 
@@ -454,8 +446,10 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
 });
 
 
-// Settings:
+// Settings and Initialization:
 Hooks.once("init", () => {    
+  
+  // How far to trace rays before giving up
   game.settings.register(MOD_NAME, "ray_length", {
     name: lang('ray'),
     hint: lang('ray_hint'),
@@ -464,6 +458,51 @@ Hooks.once("init", () => {
     type: Number,
     default: 100
   });
+  
+  
+
+  libWrapper.register('lasers', 'ClockwiseSweepPolygon.create', function(wrapped, ...args) {
+    // Get the wrapped output
+    let los = wrapped(...args);
+    
+    // If this is a laser, modify the output
+    if (args[1].source.object?.data?.flags?.lasers?.is_laser){
+      //console.log("Wrapped method los 'create' intercepted.");
+      let rot = args[1].rotation;
+      let rr = Math.toRadians(rot);
+      let p = {
+        x:50*Math.cos(rr), 
+        y:50*Math.sin(rr)
+      };
+      
+      let new_points = [];
+      let p1 = utils.vSub(los.origin, p);
+      let p2 = utils.vAdd(los.origin, p);
+      new_points.push(p1);
+      new_points.push(p2);
+      for (let i = 2; i< los.points.length-2; i+=2){
+        new_points.push({x: los.points[i],
+                         y: los.points[i+1]});
+      }
+
+      let angles = new_points.map((p)=>{90-utils.vAngle( utils.vSub(p, los.origin) ) });
+      
+      // sort points by angles
+      let sorted_points = utils.dsu(new_points, angles);
+      // flatten points
+      let res_points = [];
+      for (let p of sorted_points) {
+        res_points.push(p.x);res_points.push(p.y);
+      }
+      los.points = res_points;
+    
+    }
+
+    // Return the potentially changed output
+    return los;
+  }, 'MIXED');
+
+
   /*
   game.settings.register(MOD_NAME, "activate_MATT", {
     name: lang('matt'),
@@ -472,16 +511,15 @@ Hooks.once("init", () => {
     config: true,
     type: Boolean,
     default: true
-  });
-  */
-  game.settings.register(MOD_NAME, "multi_light_model", {
+  });  
+  game.settings.register(MOD_NAME, MULTI_LIGHT_MODEL, {
     name: lang('multi_light_model'),
     hint: lang('multi_light_model_hint'),
     scope: 'world',
     config: true,
     type: Boolean,
     default: false
-  });
+  });*/
 
   /*
   game.settings.register(MOD_NAME, "dual_lights", {
