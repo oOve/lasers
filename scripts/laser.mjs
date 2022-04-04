@@ -52,7 +52,8 @@ let laser_light = {
 
 
 // Returns the set of all tokens at point p
-function tokenAtPoint(p){
+/* sadly we have to retire the quadtree method
+function tokenAtPoint(p){  
   let potential_hits = canvas.tokens.quadtree.getObjects( new NormalizedRectangle( p.x-5, p.y-5, 10, 10 ) );
   let hits = [...potential_hits].filter((token)=>{
     return (p.x > token.x) &&
@@ -62,6 +63,12 @@ function tokenAtPoint(p){
   });
   return hits;
 }
+*/
+function tokenAtPoint(p){
+  return canvas.tokens.placeables.filter((t)=>{return t.bounds.contains(p.x, p.y);});
+}
+
+
 
 // Return potential mirrors at point p
 function mirrorAtPoint(p){
@@ -212,20 +219,17 @@ function changeSensor(sensor, lamp_id, add=true){
  * @param {Array} sensors 
  * @returns {*} Result
  */
-function traceLight(start, dir, chain, lights, sensors){
-  let gs = canvas.grid.size;  
-  //let ray = new Ray(start, {x:0, y:0});
+function traceLight(start, dir, chain, lights, sensors, dg=null){
+    
+  let gs = canvas.grid.size;
   const MAX_CHAIN = game.settings.get(MOD_NAME, "ray_length");
-  
+
+    
   chain.push(coord2uv(start.x, start.y));  
 
-  for (let i = 1; i < MAX_CHAIN; ++i){
-    //ray.B.x = start.x + i*gs*dir.x;
-    //ray.B.y = start.y + i*gs*dir.y;
+  for (let i = 1; i < MAX_CHAIN; ++i){    
     let nray = new Ray(start, {x:start.x + i*gs*dir.x, y:start.y + i*gs*dir.y });
-
-    console.log("Tracing:", nray.B);
-
+    
     // Checking against movement collision is not quite right
     // This is a work-around for the 'early exit' we do here
     // FIXME: move to more excact collision testing.
@@ -233,7 +237,8 @@ function traceLight(start, dir, chain, lights, sensors){
     // we are unlucky will stop the reflection.
     
     if (canvas.walls.checkCollision(nray)){
-      console.log( "Hit a wall, aborting");
+      // console.log( "Hit a wall, aborting");
+      dg?.drawCircle(nray.B.x, nray.B.y, 16);
       break;
     }
     // Lets push it to the chain
@@ -241,11 +246,23 @@ function traceLight(start, dir, chain, lights, sensors){
     
     // We haven't hit a wall, yet
     // look for a token/mirror/sensor here
-    let tkps = Array.from(tokenAtPoint(nray.B));
-    let mirrors = tkps.filter(tok=>tok.document.getFlag(MOD_NAME, IS_MIRROR));
-    let sns = tkps.filter(tok=>tok.document.getFlag(MOD_NAME, IS_SENSOR));
+    
+    let tkps = tokenAtPoint({x: nray.B.x, y: nray.B.y} );
+
+    if (tkps.length){
+      dg?.lineStyle(1, 0x00FFFF, 1.0).beginFill(0xFF0000, 0.5);
+      dg?.drawCircle(nray.B.x, nray.B.y, 16);
+      dg?.lineStyle(1, 0x00FFFF, 1.0).beginFill(0x00FFFF, 0.5);
+    }else{
+      dg?.drawCircle(nray.B.x, nray.B.y, 4);
+    }
+
+    // console.log(tkps);
+
+    let mirrors = tkps.filter((tok)=>{return tok.document.getFlag(MOD_NAME, IS_MIRROR)});
+    let sns     = tkps.filter((tok)=>{return tok.document.getFlag(MOD_NAME, IS_SENSOR)});
     for (let sensor of sns){
-        sensors.push(sensor);        
+        sensors.push(sensor);
     }
     
 
@@ -275,7 +292,7 @@ function traceLight(start, dir, chain, lights, sensors){
       
       if (chain.length<MAX_CHAIN){
         // And on we go
-        traceLight(tkp.center, r_vec, chain, lights, sensors);
+        traceLight(tkp.center, r_vec, chain, lights, sensors, dg);
       }
 
       // Stop the trace here, since we found a mirror
@@ -300,6 +317,7 @@ function isChangeTransform(change){
           ));
 }
 
+
 // Require an updated tracing path from this lamp.
 function updateLamp(lamp, change){
   let chain = [];
@@ -308,7 +326,8 @@ function updateLamp(lamp, change){
   // Update its wall
   updateBackWall(lamp);
 
-  console.log('Updating lamp', lamp);
+  //console.log('Updating lamp', lamp);
+ 
 
   // Starting point at the center of the lamp
   let start = lamp.center;
@@ -319,8 +338,13 @@ function updateLamp(lamp, change){
 
   let sensors = [];
   // And lets go
-  traceLight(start, dir, chain, lights, sensors);  
   
+  let dg = (game.settings.get(MOD_NAME, "debug"))?canvas.controls.debug:null;
+  dg?.clear();
+  dg?.lineStyle(1, 0x00FFFF, 1.0).beginFill(0x00FFFF, 0.5);
+  traceLight(start, dir, chain, lights, sensors, dg);  
+  dg?.endFill();
+
   // Sensors we shone a light on now
   let current_sensors = new Set(sensors);
  
@@ -347,7 +371,6 @@ function updateLamp(lamp, change){
   for (let l of lights){
     l.light = duplicate(lamp.data.light);
     //l.angle = 5;
-    console.log ("replacing light properties");
     if (l.flags == undefined){l.flags = {};}
     if(l.flags.lasers==undefined){l.flags.lasers={};};
     l.flags.lasers.is_laser = true;
@@ -401,8 +424,8 @@ Hooks.on('deleteToken', (token, options, user_id)=>{
       if (is_lamp){
         let lights = token.getFlag(MOD_NAME, LIGHTS);
         if (lights && hasProperty(lights, 'length') && lights.length){
-          console.error(lights);
-          canvas.scene.deleteEmbeddedDocuments(lights);
+//          console.error(lights);
+          canvas.scene.deleteEmbeddedDocuments("Token", lights);
         }
       } else { // is mirror
         // TODO: Notify lights if this mirror is in active chain
@@ -501,6 +524,16 @@ Hooks.once("init", () => {
     // Return the potentially changed output
     return los;
   }, 'MIXED');
+
+
+  game.settings.register(MOD_NAME, "debug", {
+    name: lang('debug'),
+    hint: lang('debug_hint'),
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false
+  });  
 
 
   /*
