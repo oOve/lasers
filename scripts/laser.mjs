@@ -489,7 +489,7 @@ Hooks.once("init", () => {
     let los = wrapped(...args);
     
     // If this is a laser, modify the output
-    if (args[1].source.object?.data?.flags?.lasers?.is_laser){
+    if (args[1].source?.object?.data?.flags?.lasers?.is_laser){
       //console.log("Wrapped method los 'create' intercepted.");
       let rot = args[1].rotation;
       let rr = Math.toRadians(rot);
