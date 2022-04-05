@@ -12,12 +12,19 @@
  */
 
 
-
+/**
+ * 
+ * @param {*} value prepended value
+ * @param {Array} array 
+ * @returns {Array} new array with value prepended
+ */
 export function prepend(value, array) {
     var newArray = array.slice();
     newArray.unshift(value);
     return newArray;
   }
+  
+
 
 export function vSub(p1, p2){
     return {x:p1.x-p2.x, y:p1.y-p2.y };
@@ -30,6 +37,12 @@ export function vAngle(p){
     return 90+Math.toDegrees(Math.atan2(p.y, p.x));
 }
 
+
+/**
+ * @param {Array} arr1 Array to reorder
+ * @param {Array} arr2 Array to sort, and used as indices for re-order array
+ * @returns {Array} Array 1 sorted by array 2
+ */
 export const dsu = (arr1, arr2) => arr1
     .map((item, index) => [arr2[index], item]) // add the args to sort by
     .sort(([arg1], [arg2]) => arg2 - arg1) // sort by the args

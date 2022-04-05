@@ -21,10 +21,12 @@ const ACTIVE_LIGHTS = 'active_lights';
 const IS_MIRROR     = 'is_mirror';
 const IS_LAMP       = 'is_lamp';
 const IS_SENSOR     = 'is_sensor'
+const IS_PRISM      = 'is_prism';
 const BACK_WALL     = 'back_wall';
 const RAY_CHAIN     = 'ray_chain';
 const MACRO_NAME    = 'macro_name';
 const LIGHTS        = 'lights';
+
 
 const MULTI_LIGHTS      = 'multi_lights';
 const MULTI_LIGHT_MODEL = "multi_light_model";
@@ -50,7 +52,6 @@ let laser_light = {
 };
 
 
-
 // Returns the set of all tokens at point p
 /* sadly we have to retire the quadtree method
 function tokenAtPoint(p){  
@@ -68,14 +69,18 @@ function tokenAtPoint(p){
   return canvas.tokens.placeables.filter((t)=>{return t.bounds.contains(p.x, p.y);});
 }
 
-
-
 // Return potential mirrors at point p
 function mirrorAtPoint(p){
   return [...tokenAtPoint(p)].filter(tok=>tok.document.getFlag(MOD_NAME, IS_MIRROR));
 }
 
 
+/**
+ * 
+ * @param {*} vec 
+ * @param {*} norm 
+ * @returns 
+ */
 function reflect(vec, norm){
   // 2(N ⋅ L) N - L
   let c = 2*(vec.x*norm.x + vec.y*norm.y);
@@ -96,27 +101,34 @@ function isTokenSensor(tok){
 
 
 function updateBackWall(token){
-  let back_wall_id = token.document.getFlag(MOD_NAME, BACK_WALL);
+  let doc = hasProperty(token, 'getFlag')?token:token.document;
+
+  let back_wall_id = doc.getFlag(MOD_NAME, BACK_WALL);
   let back_wall = canvas.walls.get(back_wall_id);
-  let w = token.hitArea.width;
+  let w = token.data.width  *canvas.grid.size;
+  let h = token.data.height *canvas.grid.size;
  
   let rn = Math.toRadians(-token.data.rotation);
   // The mirrors N vec
   let m_nvec =  {x:Math.sin(rn), y:Math.cos(rn)};
   let offset = -0.1*w;
-  
+  let center = {
+    x: doc.data.x+.5*w,
+    y: doc.data.y+.5*h
+  }  
+ 
   // 90 degrees rotated
   let p1 = {x: -m_nvec.y, y:m_nvec.x};
   //-90 degrees roated
   let p2 = {x: m_nvec.y, y: -m_nvec.x};
 
   let w1 = {
-    x: token.center.x + m_nvec.x * offset + p1.x *w* 0.5,
-    y: token.center.y + m_nvec.y * offset + p1.y *w* 0.5
+    x: center.x + m_nvec.x * offset + p1.x *w* 0.5,
+    y: center.y + m_nvec.y * offset + p1.y *w* 0.5
   }
   let w2 = {
-    x: token.center.x + m_nvec.x * offset + p2.x *w* 0.5,
-    y: token.center.y + m_nvec.y * offset + p2.y *w* 0.5
+    x: center.x + m_nvec.x * offset + p2.x *w* 0.5,
+    y: center.y + m_nvec.y * offset + p2.y *w* 0.5
   }
   let wall_data = {
     c: [w1.x, w1.y, w2.x, w2.y],
@@ -129,7 +141,7 @@ function updateBackWall(token){
   if (back_wall == null){
     // create it    
     canvas.scene.createEmbeddedDocuments("Wall", [wall_data] ).then( (wall)=> {
-      token.document.setFlag(MOD_NAME, BACK_WALL, wall[0].id);
+      doc.setFlag(MOD_NAME, BACK_WALL, wall[0].id);
     });
   }else{    
     // update it
@@ -436,20 +448,46 @@ Hooks.on('deleteToken', (token, options, user_id)=>{
 
 Hooks.on('createToken', (token, options, user_id)=>{
   if (!game.user.isGM)return true;
+  let is_lamp = token.getFlag(MOD_NAME, IS_LAMP);
+  let is_mirr = token.getFlag(MOD_NAME, IS_MIRROR);
 
-  if(token.getFlag(MOD_NAME, IS_LAMP)){
+  if(is_lamp||is_mirr){
+    updateBackWall(token);
     // Check for default settings.
-    if (token.data.light.angle == 360){
-      console.warn("Creating light, found default light settings(360 degrees), replacing with 'laser settings'");
-      
-      token.update({ 
-        light:laser_light,
-        'flags.lasers.is_laser':true
-       });
+    if (is_lamp){
+      if (token.data.light.angle == 360){
+        console.warn("Creating light, found default light settings(360 degrees), replacing with 'laser settings'");
+        
+        token.update({ 
+          light:laser_light,
+          'flags.lasers.is_laser':true
+        });
+      }
     }
-    //token.data.flags.lasers.is_laser = true;
-    //token.setFlag(MOD_NAME, 'is_laser', true);
   }
+});
+
+
+
+// Fetch copy and paste, to extract and copy our flags
+Hooks.on('pasteToken', (copied, createData)=>{  
+  console.log(copied);
+  console.log(createData);
+  for (let i = 0; i < copied.length; ++i){
+    let tok = copied[i];
+    let data= createData[i];
+    let is_lamp = tok.document.getFlag(MOD_NAME, IS_LAMP);
+    let is_mirr = tok.document.getFlag(MOD_NAME, IS_MIRROR);
+    if (is_lamp || is_mirr){
+      data.flags.lasers.back_wall = null;
+    }
+
+  }
+
+  
+  
+
+
 });
 
 
