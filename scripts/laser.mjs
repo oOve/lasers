@@ -168,6 +168,9 @@ function checkMirrorsMove(pos){
 function updateMirror(token, change, options){
   updateBackWall(token);
   
+  if (hasProperty(change, 'rotation'))
+    token.document.data.rotation = change.rotation;
+
   let lights_affected = checkMirrorsMove(token.center); 
   lights_affected = utils.setUnion(lights_affected, new Set(options.lights_affected));
 
@@ -259,8 +262,10 @@ function traceLight(start, dir, chain, lights, sensors, dg=null){
     // We haven't hit a wall, yet
     // look for a token/mirror/sensor here
     
+    // Get all tokens at point B
     let tkps = tokenAtPoint({x: nray.B.x, y: nray.B.y} );
 
+    // Visualize the point
     if (tkps.length){
       dg?.lineStyle(1, 0x00FFFF, 1.0).beginFill(0xFF0000, 0.5);
       dg?.drawCircle(nray.B.x, nray.B.y, 16);
@@ -269,21 +274,26 @@ function traceLight(start, dir, chain, lights, sensors, dg=null){
       dg?.drawCircle(nray.B.x, nray.B.y, 4);
     }
 
-    // console.log(tkps);
-
+    // Filter out mirrors and sensors
     let mirrors = tkps.filter((tok)=>{return tok.document.getFlag(MOD_NAME, IS_MIRROR)});
     let sns     = tkps.filter((tok)=>{return tok.document.getFlag(MOD_NAME, IS_SENSOR)});
     for (let sensor of sns){
         sensors.push(sensor);
     }
-    
 
     if (mirrors.length){
-      let tkp = tkps[0]; // #TODO: Fix this...later
+      let tkp = mirrors[0]; // #TODO: Fix this...later
+      
       // We found a mirror
       let rn = Math.toRadians(-tkp.data.rotation);
       // The mirrors N vec
       let m_nvec =  {x:Math.sin(rn), y:Math.cos(rn)};
+      // Calculate the dot product, to check if it is facing towards "us"
+      let dot = dir.x*m_nvec.x + dir.y*m_nvec.y;
+      if (dot>0.0001){
+        // We hit the backside of a mirror, abort.
+        return;
+      }
 
       // Lets reflect this vector
       let r_vec = reflect(dir, m_nvec);
@@ -322,11 +332,7 @@ function isChangeTransform(change){
   return (hasProperty(change, 'rotation')||
           hasProperty(change, 'x')||
           hasProperty(change, 'y') ||
-          ( 
-            hasProperty(change, 'flags')&&
-            hasProperty(change.flags, 'lasers')&&
-            hasProperty(change.flags.lasers, 'forced')
-          ));
+          change?.flags?.forced );
 }
 
 
@@ -336,10 +342,14 @@ function updateLamp(lamp, change){
   let lights = [];
   
   // Update its wall
-  updateBackWall(lamp);
-
-  //console.log('Updating lamp', lamp);
+  if (change){
+    updateBackWall(lamp);
+  }  
  
+  if(lamp.data.light.angle==360){
+    lamp.document.update({light:laser_light});
+  }
+
 
   // Starting point at the center of the lamp
   let start = lamp.center;
@@ -354,7 +364,9 @@ function updateLamp(lamp, change){
   let dg = (game.settings.get(MOD_NAME, "debug"))?canvas.controls.debug:null;
   dg?.clear();
   dg?.lineStyle(1, 0x00FFFF, 1.0).beginFill(0x00FFFF, 0.5);
-  traceLight(start, dir, chain, lights, sensors, dg);  
+  // Lets trace  
+  traceLight(start, dir, chain, lights, sensors, dg);
+  // End trace
   dg?.endFill();
 
   // Sensors we shone a light on now
@@ -381,28 +393,40 @@ function updateLamp(lamp, change){
 
   // Replace mirror lights with this lamps settings.
   for (let l of lights){
-    l.light = duplicate(lamp.data.light);
-    //l.angle = 5;
+    l.light = duplicate(lamp.data.light);    
     if (l.flags == undefined){l.flags = {};}
     if(l.flags.lasers==undefined){l.flags.lasers={};};
     l.flags.lasers.is_laser = true;
   }
 
-  // Create light-token if neccesarry:
-  let mirrored_light_promise = canvas.scene.createEmbeddedDocuments("Token", lights );
-  
-  // Clean up old lights
-  if(old_lights){
-    // Delete em'
-    canvas.scene.deleteEmbeddedDocuments("Token",old_lights);
+  lights = Array.from(lights);
+  let diff = lights.length - ((old_lights)?old_lights.length:0);  
+  if (diff>0){    
+    // Create new light-tokens:    
+    canvas.scene.createEmbeddedDocuments("Token", lights.splice(-diff)).then((news)=>{
+        let old = lamp.document.getFlag(MOD_NAME, LIGHTS);
+        let new_ids = news.map(t=>t.id);
+        lamp.document.setFlag(MOD_NAME, LIGHTS, (old)?new_ids.concat(old):new_ids);
+    });
   }
+  // Re-use old id's (since we spliced the array above, this should be safe)
+  for (let i = 0; i < lights.length; ++i){
+    lights[i]._id = old_lights[i];
+  }
+  if(lights.length){
+    canvas.scene.updateEmbeddedDocuments("Token", lights);
+  }
+  
+  // Delete superfluous 'old_lights'
+  if (diff < 0){
+    let to_remove = old_lights.splice(diff);
+    canvas.scene.deleteEmbeddedDocuments("Token", to_remove);
+    lamp.document.setFlag(MOD_NAME, LIGHTS, old_lights);
+  }  
 
   // Keep the trace chain
   lamp.document.setFlag(MOD_NAME, RAY_CHAIN, chain);
-  // And, finally keep the new lights (tokens)
-  mirrored_light_promise.then((new_lights)=>{
-    lamp.document.setFlag(MOD_NAME, LIGHTS, new_lights.map((l)=>{return l.id;}));
-  });
+  
 }
 
 
@@ -471,23 +495,16 @@ Hooks.on('createToken', (token, options, user_id)=>{
 
 // Fetch copy and paste, to extract and copy our flags
 Hooks.on('pasteToken', (copied, createData)=>{  
-  console.log(copied);
-  console.log(createData);
   for (let i = 0; i < copied.length; ++i){
     let tok = copied[i];
     let data= createData[i];
     let is_lamp = tok.document.getFlag(MOD_NAME, IS_LAMP);
     let is_mirr = tok.document.getFlag(MOD_NAME, IS_MIRROR);
     if (is_lamp || is_mirr){
-      data.flags.lasers.back_wall = null;
+      tok.document.setFlag(MOD_NAME, BACK_WALL, null);
+      tok.document.setFlag(MOD_NAME, LIGHTS, null);
     }
-
   }
-
-  
-  
-
-
 });
 
 
@@ -495,8 +512,20 @@ Hooks.on('pasteToken', (copied, createData)=>{
 // Let's grab those token updates
 Hooks.on('updateToken', (token, change, options, user_id)=>{
   if (!game.user.isGM)return true;
+    
+  if ( (change?.flags?.lasers) && // Laser is included in this update
+       (!token.data.flags?.lasers?.is_mirror) &&
+       (!token.data.flags?.lasers?.is_lamp) &&  // Both mirror and lamp is unset
+       token.getFlag(MOD_NAME, BACK_WALL) ){ // and we still have a back wall
+         token.setFlag(MOD_NAME, BACK_WALL, null);  // unset it, and delete it
+         canvas.scene.deleteEmbeddedDocuments('Wall', [token.getFlag(MOD_NAME, BACK_WALL)]);
+       }
 
-  if (isChangeTransform(change) || hasProperty(options, 'lights_affected')){  
+  if ( isChangeTransform(change) || 
+       hasProperty(options, 'lights_affected')||
+       change?.flags?.lasers?.is_lamp ||
+       change?.flags?.lasers?.is_mirror
+  ){  
     if (token.getFlag(MOD_NAME, IS_LAMP)){
       updateLamp(canvas.tokens.get(token.id), change);
     }
@@ -504,6 +533,7 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
       updateMirror( canvas.tokens.get(token.id), change, options);
     }
   }
+
 });
 
 
