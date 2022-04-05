@@ -414,7 +414,7 @@ function updateLamp(lamp, change){
     lights[i]._id = old_lights[i];
   }
   if(lights.length){
-    canvas.scene.updateEmbeddedDocuments("Token", lights);
+    canvas.scene.updateEmbeddedDocuments("Token", lights, {animate:false});
   }
   
   // Delete superfluous 'old_lights'
