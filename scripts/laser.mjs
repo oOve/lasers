@@ -653,6 +653,11 @@ function createCheckBox(app, fields, data_name, title, hint){
   fields.append(input);
 }
 
+function createSeparator(){
+  let d = document.createElement('div');
+  d.style.cssText = 'border-left:1px solid #000;height:1em';
+  return d;
+}
 
 
 
@@ -674,7 +679,9 @@ Hooks.on("renderTokenConfig", (app, html) => {
   formGroup.append(formFields);
 
   createCheckBox(app, formFields, IS_LAMP,   lang('lightsource'), lang('light_hint'));
+  formFields.append(createSeparator());
   createCheckBox(app, formFields, IS_MIRROR, lang('mirror'),      lang('mirror_hint'));
+  formFields.append(createSeparator());
   createCheckBox(app, formFields, IS_SENSOR, lang('sensor'),      lang('sensor_hint'));
 
   const mname = document.createElement('input');

@@ -27,6 +27,13 @@
     "license": "LICENSE",
     "readme": "README.md",
     "styles":[],
-    "packs": [],    
+    "packs": [
+      {
+        "name": "lasers",
+        "label": "Laser Props",
+        "path": "./packs/lasers.db",
+        "type": "Actor"
+      }
+    ],
     "library": false
   }
