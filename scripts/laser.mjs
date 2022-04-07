@@ -148,10 +148,8 @@ function mergeDocuments(token, docs, type, type_id ){
     docs[i]._id = old_ids[i];
   }
   if (docs.length){
-    canvas.scene.updateEmbeddedDocuments(type, docs);
+    canvas.scene.updateEmbeddedDocuments(type, docs, {animate:false});
   }
-
-
 }
 
 
@@ -181,8 +179,8 @@ function updateBackWall(token){
   
   let offset = -0.1*size.x;
   if (is_prism){
-    offset = .35*size.x;
-    let q1 = center.added(m_nvec.scaled( 0.4*size.x));
+    offset = .3*size.x;
+    let q1 = center.added(m_nvec.scaled( 0.3*size.x));
     let q2 = center.added(m_nvec.scaled(-0.4*size.x));
     walls.push({c: [q1.x, q1.y, q2.x, q2.y],
                 light: 20,
@@ -223,8 +221,9 @@ function checkMirrorsMove(pos){
 function updateMirror(token, change, options){
   updateBackWall(token);
   
-  if (hasProperty(change, 'rotation'))
+  if (hasProperty(change, 'rotation')){
     token.document.data.rotation = change.rotation;
+  }
 
   let lights_affected = checkMirrorsMove(token.center); 
   lights_affected = utils.setUnion(lights_affected, new Set(options.lights_affected));
@@ -364,8 +363,8 @@ function traceLight(token, start, dir, chain, lights, sensors, dg=null){
 
       // vec to rotation
       let lrot = -Math.atan2(r_vec.x, r_vec.y) * 180 / Math.PI;
-      let x = tkp.data.x;
-      let y = tkp.data.y;
+      let x = tkp.center.x; //tkp.data.x;
+      let y = tkp.center.y; //tkp.data.y;
       if (!is_mirror){
         x+=m_nvec.x*.4*gs;
         y+=m_nvec.y*.4*gs;
@@ -463,13 +462,15 @@ function updateLamp(lamp, change){
 
   // Replace mirror lights with this lamps settings.
   for (let l of lights){
-    l.light = duplicate(lamp.data.light);    
+    l.light = duplicate(lamp.data.light);
+    l.config = l.light;
     if (l.flags == undefined){l.flags = {};}
     if(l.flags.lasers==undefined){l.flags.lasers={};};
     l.flags.lasers.is_laser = true;
   }
-
   lights = Array.from(lights);
+  mergeDocuments(lamp.document, lights, 'AmbientLight', LIGHTS);
+  /*
   let diff = lights.length - ((old_lights)?old_lights.length:0);  
   if (diff>0){    
     // Create new light-tokens:    
@@ -492,7 +493,7 @@ function updateLamp(lamp, change){
     let to_remove = old_lights.splice(diff);
     canvas.scene.deleteEmbeddedDocuments("Token", to_remove);
     lamp.document.setFlag(MOD_NAME, LIGHTS, old_lights);
-  }  
+  }  */
 
   // Keep the trace chain
   lamp.document.setFlag(MOD_NAME, RAY_CHAIN, chain);
