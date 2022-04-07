@@ -1,4 +1,4 @@
-# lasers - light-beams and mirrors
+# Lasers - Light-beams and Mirrors
 FoundryVTT module for lasers, or light-beams that can be reflected using mirrors. This version implements mirrrors, light sources, prisms and sensors that interact with each other. All these "tools" are tokens, that can be rotated and moved as usual.
 
 ## Laser tools
