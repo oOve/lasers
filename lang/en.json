@@ -2,9 +2,12 @@
     "LASERS.lightsource"   : "light source",
     "LASERS.mirror"        : "mirror",
     "LASERS.sensor"        : "sensor",
+    "LASERS.prism"         : "prism",
     "LASERS.light_hint"    : "Check box to indicate that this token is a light source",
     "LASERS.mirror_hint"   : "Check box to indicate that this token is a mirror",
     "LASERS.sensor_hint"   : "Check box to indicate that this token is a sensor.",
+    "LASERS.prism_hint"    : "Check box to indicate that this token is a prism",
+    
    
     "LASERS.macro_name"    : "macro name",
     "LASERS.macro_hint"    : "The macro to execute when the number of light-sources at this sensor changes",
