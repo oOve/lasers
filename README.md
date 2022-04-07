@@ -1,6 +1,5 @@
 # lasers - light-beams and mirrors
-FoundryVTT module for lasers, or light-beams that can be reflected using mirrors. This preliminary beta version implements mirrrors and light sources that interact with each other.
-Both the mirrors and lightsources are tokens, and they are thus compatible with pushable tokens.
+FoundryVTT module for lasers, or light-beams that can be reflected using mirrors. This version implements mirrrors, light sources, prisms and sensors that interact with each other. All these "tools" are tokens, that can be rotated and moved as usual.
 
 ## Laser tools
  * <img src="media/lamp_green.png" height=50><img src="media/lamp_blue.png" height=50> **The lasers**, these output light in its rotation heading. The light can be colored, animated and configured in the token settings.
