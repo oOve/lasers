@@ -2,15 +2,22 @@
 FoundryVTT module for lasers, or light-beams that can be reflected using mirrors. This preliminary beta version implements mirrrors and light sources that interact with each other.
 Both the mirrors and lightsources are tokens, and they are thus compatible with pushable tokens.
 
-## Help:
- * Create a token that has the image of your desired light source. The image must be rotated so that the light comes out in the down direction. 
- * Edit the token (1), and in the configuration click the leftmost of the two checkboxes (2), to indicate that this is your light.
- * In the light settings of your lamp, style your lightsource to your heart's desire. Remember to set the Emission Angle to a narrow ray, e.g., 5 Degrees.
- * Create another token, and choose an image of a mirror. The reflecting side should also point downward.
- * Edit the token (1), and select the middle checkbox (3), denoting this as a mirror.
+## Laser tools
+ * <img src="media/lamp_green.png" height=50><img src="media/lamp_blue.png" height=50> **The lasers**, these output light in its rotation heading. The light can be colored, animated and configured in the token settings.
+ * <img src="media/mirror.png" height=50> **The Mirror** This will reflect light (like a normal mirror) from its front side, and block light from its back.
+ * <img src="media/crystal.png" height=50> **The Sensor** This token will detect when light hits it. It can be configured to run a macro every time the number of lights shining on the sensor changes. E.g., from 0 to 1, 2-3 or 1 to zero. If you set up the sensor to emit light, the sensor will turn off that light when it reaches zero lights, and light it up again when it gets above one. The name of the macro that will be executed can be set under token config (3).
+ * <img src="media/prism.png" height=50> **The Prism** This token will take light in from any angle, and output in a single direction. This can e.g., be used to collect light of multiple colors, and direct them all out in a single beam.
+
+All the tools above are available in the compendium named *Laser Tools*.
+
+## Creating Tools from scratch:
+ * Create a token that has the image of your desired tool. The image must be rotated so that the light comes out in the down direction, whether this is the front of the mirror, the source of the laser. 
+ * Edit the token (1), and in the configuration click the checkbox (2) that matches the tool you wish to create.
+ * If you created a lamp, you can edit its light settings under the light tab. Remember to set the light output angle quite narrow, e.g. 5 degrees..
+ * If you created a sensor, you can set the name of the macro it will execute to the right (3). This macro name must match the name of an existing macro.
  * Rotate tokens, to your desired position, or better yet, install Monks Active tiles, and create buttons that your players can interact with.
 
-![image](https://user-images.githubusercontent.com/8543541/160940062-3a61394f-8ac1-4026-8e23-42394705bbd9.png)
+![image](https://user-images.githubusercontent.com/8543541/162102234-dcc79aef-622d-4a2e-8bff-39c8937f51d5.png)
 
 ![image](https://user-images.githubusercontent.com/8543541/161455679-06a1a352-256b-4415-81a1-d44f859087f5.png)
 
@@ -34,7 +41,6 @@ Both the light source and the mirrors create a small wall behind them. This wall
 
 ## TODO:
  * Implement support for Monks Active tiles, so that light beams can trigger them. As far as today, there is no interaction outside this module of the light-beams. 
- * Colored lights, and the possibility for filters, that change the color of the light along its path.
  * Probably bug-fixing
 
 
