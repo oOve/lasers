@@ -274,6 +274,18 @@ function changeSensor(sensor, lamp_id, add=true){
   if (macro){
     macro.execute({token:sensor, light_count:active.size});
   }
+
+  let p = sensor.center;
+  let opts = { tokens: Array.from(active).map(i=>canvas.tokens.get(i)), method: "lasers sensor", pt: p};
+  // Trigger Monks Active Tiles:
+  let tiles = canvas.scene.tiles.filter(t=>t.object.bounds.contains(p.x, p.y));
+  tiles = tiles.filter(t=>t.data.flags['monks-active-tiles']?.active);
+  try{
+    tiles.map(t=>t.trigger(opts));
+  }catch (err){
+    console.error("Failed triggering Monks Tile from sensor:", err);
+  }
+
 }
 
 
