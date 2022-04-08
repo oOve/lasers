@@ -35,12 +35,16 @@ if (activelights.length>0){
   console.log("Exciting things here!");
 }
 ```
+### Monks Active Tiles
+The sensor can also trigger Monks Active tiles. The sensor will trigger all Active Tiles that contains it. Below is a simple trigger that only shows a dialog after three lights shines on it. The "current tokens" in the triggered tile will point to the lasers that currently shine on the sensor.
+<img src="https://user-images.githubusercontent.com/8543541/162345025-4d970186-a094-4c17-bf1a-c1591a21f7a0.png" width=400>
+
+
 
 Both the light source and the mirrors create a small wall behind them. This wall will be rotated and moved along with the token (and deleted when the token is deleted). It may happen that these walls are left behind, in that case, manually delete them.
 
 ## TODO:
- * Implement support for Monks Active tiles, so that light beams can trigger them. As far as today, there is no interaction outside this module of the light-beams. 
- * Probably bug-fixing
+ * Probably bug-fixing, still some issues with copying and pasting objects. Also interacting too fast with the lights can introduce some un-intended race conditions.
 
 
 Do you like this module?; then please support me at [Patreon](https://www.patreon.com/drO_o).
