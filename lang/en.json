@@ -18,9 +18,6 @@
     "LASERS.matt"          : "Activate Active Tile Triggers", 
     "LASERS.matt_hint"     : "Activate 'Monks Active Tile Triggers' on sensor change. Requires the MATT module installed.",
 
-    "LASERS.multi_light_model"     :"Use multiple lights",
-    "LASERS.multi_light_model_hint":"Every lamp and every reflection produces several lights, providing a better visual quality, but at the cost of scene performance.",
-
     "LASERS.debug"         : "Debug",
     "LASERS.debug_hint"    : "Enable drawing of debug lines along the lightpaths, only works for one light at a time."
 }
