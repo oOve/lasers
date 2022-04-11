@@ -1,0 +1,23 @@
+{
+  "LASERS.lightsource"   : "Lichtquelle",
+  "LASERS.mirror"        : "Spiegel",
+  "LASERS.sensor"        : "Sensor",
+  "LASERS.prism"         : "Prisma",
+  "LASERS.light_hint"    : "Aktivieren, um dem Token die Eigenschaft Lichtquelle zu geben",
+  "LASERS.mirror_hint"   : "Aktivieren, um dem Token die Eigenschaft Spiegel zu geben",
+  "LASERS.sensor_hint"   : "Aktivieren, um dem Token die Eigenschaft Sensor zu geben",
+  "LASERS.prism_hint"    : "Aktivieren, um dem Token die Eigenschaft Prisma zu geben",
+
+
+  "LASERS.macro_name"    : "Macroname",
+  "LASERS.macro_hint"    : "Das Macro, das ausgeführt wird, wenn sich die Anzahl der betreffenden Lichtquellen ändert",
+
+  "LASERS.ray"           : "Lichtstrahllänge",
+  "LASERS.ray_hint"      : "Die maximale Länge in Rasterzellen, die ein Lichtstrahl fällt",
+
+  "LASERS.matt"          : "Aktiviere Active Tile Triggers",
+  "LASERS.matt_hint"     : "Aktiviere 'Monks Active Tile Triggers' bei Veränderungen am Sensor. Das MATT Modul wird vorausgesetzt.",
+
+  "LASERS.debug"         : "Debug",
+  "LASERS.debug_hint"    : "Aktiviere die Anzeige von Linien, die die Pfade des Lichts anzeigen. Es kann nur ein Pfad angezeigt werden."
+}
