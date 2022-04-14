@@ -16,7 +16,6 @@ const MOD_NAME = 'lasers';
 const LANG_PRE = 'LASERS';
 
 
-
 const ACTIVE_LIGHTS = 'active_lights';
 const IS_MIRROR     = 'is_mirror';
 const IS_LAMP       = 'is_lamp';
@@ -27,9 +26,6 @@ const RAY_CHAIN     = 'ray_chain';
 const MACRO_NAME    = 'macro_name';
 const LIGHTS        = 'lights';
 
-
-const MULTI_LIGHTS      = 'multi_lights';
-const MULTI_LIGHT_MODEL = "multi_light_model";
 
 
 /**
@@ -71,7 +67,7 @@ function tokenAtPoint(p){
 
 // Return potential mirrors at point p
 function mirrorAtPoint(p){
-  return [...tokenAtPoint(p)].filter(tok=>tok.document.getFlag(MOD_NAME, IS_MIRROR));
+    return [...tokenAtPoint(p)].filter(tok=>tok.document.getFlag(MOD_NAME, IS_MIRROR));
 }
 
 
@@ -92,69 +88,65 @@ function reflect(vec, norm){
 
 
 
-function mirror_and_lamp_wall(token){
-  let w = token.data.width  *canvas.grid.size;
-  let h = token.data.height *canvas.grid.size;
- 
-  let rn = Math.toRadians(-token.data.rotation);
-  // The mirrors N vec
-  let m_nvec =  {x:Math.sin(rn), y:Math.cos(rn)};
-  let offset = -0.1*w;
-  let center = {
-    x: doc.data.x+.5*w,
-    y: doc.data.y+.5*h
-  }
- 
-  // 90 degrees rotated
-  let p1 = {x: -m_nvec.y, y:m_nvec.x};
-  //-90 degrees roated
-  let p2 = {x: m_nvec.y, y: -m_nvec.x};
-
-  let w1 = {
-    x: center.x + m_nvec.x * offset + p1.x *w* 0.5,
-    y: center.y + m_nvec.y * offset + p1.y *w* 0.5
-  }
-  let w2 = {
-    x: center.x + m_nvec.x * offset + p2.x *w* 0.5,
-    y: center.y + m_nvec.y * offset + p2.y *w* 0.5
-  }
-  let wall_data = {
-    c: [w1.x, w1.y, w2.x, w2.y],
-    light: 20,
-    move: 0,
-    sight: 0,
-    sound: 0
-  };
-}
 
 function isString(val){
-  return (typeof val === 'string' || val instanceof String);
-}
-
-function mergeDocuments(token, docs, type, type_id ){
-  let old_ids = token.getFlag(MOD_NAME, type_id);
-  old_ids = isString(old_ids)?[old_ids]:old_ids;
-  old_ids = (old_ids)?old_ids:[];
-  let diff = docs.length - old_ids.length;
-  if (diff>0){
-    canvas.scene.createEmbeddedDocuments(type, docs.splice(-diff)).then(new_ids=>{
-      token.setFlag(MOD_NAME, type_id, old_ids.concat(new_ids.map(t=>t.id)));
-    });
-  }else if (diff<0){
-    canvas.scene.deleteEmbeddedDocuments(type, old_ids.splice(diff));
-    token.setFlag(MOD_NAME, type_id, old_ids);
-  }  
-  for (let i =0; i < docs.length; ++i){
-    docs[i]._id = old_ids[i];
-  }
-  if (docs.length){
-    canvas.scene.updateEmbeddedDocuments(type, docs, {animate:false});
-  }
+    return (typeof val === 'string' || val instanceof String);
 }
 
 
+async function mergeDocuments(token, docs, type, type_id ){
+    let old_ids = token.getFlag(MOD_NAME, type_id);
+    old_ids = isString(old_ids)?[old_ids]:old_ids;
+    old_ids = (old_ids)?old_ids:[];
+    let diff = docs.length - old_ids.length;
+    if (diff>0){
+        canvas.scene.createEmbeddedDocuments(type, docs.splice(-diff)).then(async res=>{
+            let updated_old = token.getFlag(MOD_NAME, type_id);
+            updated_old = (updated_old)?updated_old:[];
+            let nudoc = updated_old.concat(res.map(t=>t.id));
+            await token.setFlag(MOD_NAME, type_id, nudoc);
+        });
+        
+    }else if (diff<0){
+        canvas.scene.deleteEmbeddedDocuments(type, old_ids.splice(diff));        
+        await token.setFlag(MOD_NAME, type_id, old_ids);
+    }
+    // Re-use old id's
+    for (let i=0; i < docs.length; ++i){
+        docs[i]._id = old_ids[i];
+    }
+    if (docs.length){
+        canvas.scene.updateEmbeddedDocuments(type, docs, {animate:false});
+    }
+}
 
-function updateBackWall(token){
+/*
+async function mergeDocuments(token, docs, type, type_id ){
+    let old_ids = token.getFlag(MOD_NAME, type_id);
+    old_ids = isString(old_ids)?[old_ids]:old_ids;
+    old_ids = (old_ids)?old_ids:[];
+    let diff = docs.length - old_ids.length;
+    if (diff>0){
+        let res = await canvas.scene.createEmbeddedDocuments(type, docs.splice(-diff));
+        let nudoc = old_ids.concat(res.map(t=>t.id));
+        await token.setFlag(MOD_NAME, type_id, nudoc);
+    }else if (diff<0){
+        await canvas.scene.deleteEmbeddedDocuments(type, old_ids.splice(diff));
+        token.flags.lasers[type_id] = old_ids;
+        await token.setFlag(MOD_NAME, type_id, old_ids);
+    }
+    // Re-use old id's
+    for (let i=0; i < docs.length; ++i){
+        docs[i]._id = old_ids[i];
+    }
+    if (docs.length){
+        await canvas.scene.updateEmbeddedDocuments(type, docs, {animate:false});
+    }
+}
+*/
+
+
+async function updateBackWall(token){
   let doc = hasProperty(token, 'getFlag')?token:token.document;
   let is_prism = doc.getFlag(MOD_NAME ,IS_PRISM);
   let back_wall_ids = doc.getFlag(MOD_NAME, BACK_WALL);
@@ -199,7 +191,7 @@ function updateBackWall(token){
     sound: 0
   };
   walls.push(wall_data);
-  mergeDocuments(doc, walls, 'Wall', BACK_WALL);  
+  await mergeDocuments(doc, walls, 'Wall', BACK_WALL);  
 }
 
 
@@ -242,7 +234,7 @@ function updateMirror(token, change, options){
  */
 function coord2uv(x, y){
   let gs = canvas.grid.size;
-  return Math.round(x/gs) + ',' + Math.round(y/gs);
+  return Math.floor(x/gs) + ',' + Math.floor(y/gs);
 }
 
 
@@ -285,7 +277,6 @@ function changeSensor(sensor, lamp_id, add=true){
   }catch (err){
     console.error("Failed triggering Monks Tile from sensor:", err);
   }
-
 }
 
 
@@ -303,7 +294,7 @@ function changeSensor(sensor, lamp_id, add=true){
 function traceLight(token, start, dir, chain, lights, sensors, dg=null){
     
   let gs = canvas.grid.size;
-  let step = gs*0.5;
+  let step = gs*0.66;
   const MAX_CHAIN = game.settings.get(MOD_NAME, "ray_length");
 
     
@@ -318,14 +309,15 @@ function traceLight(token, start, dir, chain, lights, sensors, dg=null){
     // FIXME: move to more excact collision testing.
     // The problem is that the mirrors have "back walls", that if 
     // we are unlucky will stop the reflection.
+
+    // Lets push it to the chain
+    chain.push(coord2uv(nray.B.x, nray.B.y));
     
     if (canvas.walls.checkCollision(nray)){
       // console.log( "Hit a wall, aborting");
       dg?.drawCircle(nray.B.x, nray.B.y, 16);
-      break;
+      break;      
     }
-    // Lets push it to the chain
-    chain.push(coord2uv(nray.B.x, nray.B.y));    
     
     // We haven't hit a wall, yet
     // look for a token/mirror/sensor here
@@ -364,8 +356,8 @@ function traceLight(token, start, dir, chain, lights, sensors, dg=null){
       if(is_mirror){
         // Calculate the dot product, to check if it is facing towards "us"
         let dot = dir.x*m_nvec.x + dir.y*m_nvec.y;
-        if (dot>0.0001){
-          // We hit the backside of a mirror, abort.
+        if (dot>0.1){
+          // We hit the backside of a mirror, abort.          
           return;
         }
       }
@@ -418,7 +410,7 @@ function isChangeTransform(change){
 
 
 // Require an updated tracing path from this lamp.
-function updateLamp(lamp, change){
+async function updateLamp(lamp, change){
   let chain = [];
   let lights = [];
   
@@ -463,15 +455,14 @@ function updateLamp(lamp, change){
       return (new Set(s.document.getFlag(MOD_NAME, ACTIVE_LIGHTS))).has(lamp.id);
   });
 
+  // The difference between those that aren't lit up, but was lit last cycle
   let turn_off = utils.setDifference(prev_sensors, current_sensors);
+  // The difference between those that weren't lit up last cycle, but are now.
   let turn_on  = utils.setDifference(current_sensors, prev_sensors);
   for (let s of turn_off){deactivateSensor(s, lamp.id);}
   for (let s of turn_on ){  activateSensor(s, lamp.id);}
 
-
-  // Existing lights
-  let old_lights = lamp.document.getFlag(MOD_NAME, LIGHTS);
-
+ 
   // Replace mirror lights with this lamps settings.
   for (let l of lights){
     l.light = duplicate(lamp.data.light);
@@ -481,31 +472,7 @@ function updateLamp(lamp, change){
     l.flags.lasers.is_laser = true;
   }
   lights = Array.from(lights);
-  mergeDocuments(lamp.document, lights, 'AmbientLight', LIGHTS);
-  /*
-  let diff = lights.length - ((old_lights)?old_lights.length:0);  
-  if (diff>0){    
-    // Create new light-tokens:    
-    canvas.scene.createEmbeddedDocuments("Token", lights.splice(-diff)).then((news)=>{
-        let old = lamp.document.getFlag(MOD_NAME, LIGHTS);
-        let new_ids = news.map(t=>t.id);
-        lamp.document.setFlag(MOD_NAME, LIGHTS, (old)?new_ids.concat(old):new_ids);
-    });
-  }
-  // Re-use old id's (since we spliced the array above, this should be safe)
-  for (let i = 0; i < lights.length; ++i){
-    lights[i]._id = old_lights[i];
-  }
-  if(lights.length){
-    canvas.scene.updateEmbeddedDocuments("Token", lights, {animate:false});
-  }
-  
-  // Delete superfluous 'old_lights'
-  if (diff < 0){
-    let to_remove = old_lights.splice(diff);
-    canvas.scene.deleteEmbeddedDocuments("Token", to_remove);
-    lamp.document.setFlag(MOD_NAME, LIGHTS, old_lights);
-  }  */
+  await mergeDocuments(lamp.document, lights, 'AmbientLight', LIGHTS);
 
   // Keep the trace chain
   lamp.document.setFlag(MOD_NAME, RAY_CHAIN, chain);
@@ -618,7 +585,7 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
       updateLamp(canvas.tokens.get(token.id), change);
     }
     if (token.getFlag(MOD_NAME, IS_MIRROR)||token.getFlag(MOD_NAME, IS_PRISM) ){
-      updateMirror( canvas.tokens.get(token.id), change, options);
+      updateMirror(canvas.tokens.get(token.id), change, options);
     }
   }
 

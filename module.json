@@ -2,7 +2,7 @@
     "name": "lasers",
     "title": "Lasers and Lightbeams",
     "description": "Adds lightbeams that can be reflected off mirrors, or colored by glass",
-    "version": "1.6.2",
+    "version": "1.6.3",
     "minimumCoreVersion": "9",
     "compatibleCoreVersion": "9",
     "author": "o_Ove",
@@ -15,7 +15,7 @@
     "socket": false,
     "esmodules": ["./scripts/laser.mjs"],    
     "url": "https://github.com/oOve/lasers",
-    "download": "https://github.com/oOve/lasers/archive/1.6.2.zip",
+    "download": "https://github.com/oOve/lasers/archive/1.6.3.zip",
     "manifest": "https://github.com/oOve/lasers/releases/latest/download/module.json",
     "languages": [
       {
