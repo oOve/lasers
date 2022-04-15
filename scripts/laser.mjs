@@ -27,6 +27,12 @@ const MACRO_NAME    = 'macro_name';
 const LIGHTS        = 'lights';
 
 
+/**
+ * @typedef {Object} Vec2
+ * @property {number} x 
+ * @property {number} y
+ */
+
 
 /**
  * Get translated string
@@ -73,9 +79,9 @@ function mirrorAtPoint(p){
 
 /**
  * 
- * @param {*} vec 
- * @param {*} norm 
- * @returns 
+ * @param {Vec2} vec 
+ * @param {Vec2} norm 
+ * @returns {Vec2} Reflected vectorS
  */
 function reflect(vec, norm){
   // 2(N ⋅ L) N - L
@@ -85,8 +91,6 @@ function reflect(vec, norm){
     y: -(c * norm.y - vec.y)
   };
 }
-
-
 
 
 function isString(val){
@@ -195,12 +199,19 @@ async function updateBackWall(token){
 }
 
 
-
+/**
+ * Check whether a mirrors move affects some lights.
+ * @param {Vec2} pos 
+ * @returns {Set} The set of lights affected by this mirrors move
+ */
 function checkMirrorsMove(pos){
+  // Get all lights in scene
   let lights = canvas.tokens.placeables.filter(t=>(t.document.getFlag(MOD_NAME, IS_LAMP) ))
   let lights_affected = new Set();
+  // Round this mirros position to the closest grid cell
   let uv = coord2uv(pos.x, pos.y);
 
+  // Iterate through all the lights in the scene, and check their ray chains if they contain our uv
   for (let light of lights){
     let rchain = new Set(light.document.getFlag(MOD_NAME, RAY_CHAIN));
     if (rchain.has(uv)){
@@ -210,20 +221,29 @@ function checkMirrorsMove(pos){
   return lights_affected;
 }
 
+/**
+ * Update a given mirror.
+ * @param {*} token The token representing the mirror
+ * @param {*} change The change broadcasted by foundry
+ * @param {*} options 
+ */
 function updateMirror(token, change, options){
-  updateBackWall(token);
-  
-  if (hasProperty(change, 'rotation')){
-    token.document.data.rotation = change.rotation;
-  }
+    updateBackWall(token);
 
-  let lights_affected = checkMirrorsMove(token.center); 
-  lights_affected = utils.setUnion(lights_affected, new Set(options.lights_affected));
+    if (hasProperty(change, 'rotation')){
+        // Update the tokens document to match the current change
+        token.document.data.rotation = change.rotation;
+    }
+    // Check which ligths are affected by this movement
+    let lights_affected = checkMirrorsMove(token.center);
+    // Create the union between these, and the potientially affected lights by preUpdate in the options
+    lights_affected = utils.setUnion(lights_affected, new Set(options.lights_affected));
 
-  for (let light of lights_affected){
-    let l = canvas.tokens.get(light);
-    updateLamp(l);
-  }
+    for (let light of lights_affected){
+        // Update those lights
+        let l = canvas.tokens.get(light);
+        updateLamp(l);
+    }
 }
 
 /**
@@ -242,41 +262,44 @@ function coord2uv(x, y){
 function activateSensor(  sensor, lamp_id){changeSensor(sensor, lamp_id, true);}
 function deactivateSensor(sensor, lamp_id){changeSensor(sensor, lamp_id, false);}
 function changeSensor(sensor, lamp_id, add=true){
-  let sensor_doc = sensor.document;
-  
-  // Fetch previously active lighs on this sensor
-  let active = new Set(sensor_doc.getFlag(MOD_NAME, ACTIVE_LIGHTS));
-  if (add){
-    if (active.size==0 && sensor.data.light.alpha==0){
-      sensor_doc.update({'light.alpha':0.8});
+    let sensor_doc = sensor.document;
+
+    // Fetch previously active lighs on this sensor
+    let active = new Set(sensor_doc.getFlag(MOD_NAME, ACTIVE_LIGHTS));
+    if (add){
+        // If our size is zero, and we add one, we "turn on" its light.
+        if (active.size==0 && sensor.data.light.alpha==0){
+            sensor_doc.update({'light.alpha':0.8});
+        }
+        active.add(lamp_id);
+    }else{
+        active.delete(lamp_id);
+        // If the active lights are down to zero (after removing the one) we "turn off" the sensors light
+        if (active.size == 0 && sensor.data.light.alpha>0){
+            sensor_doc.update({'light.alpha':0.0});
+        }
     }
-    active.add(lamp_id);
-  }else{
-    active.delete(lamp_id);
-    if (active.size == 0 && sensor.data.light.alpha>0){
-      sensor_doc.update({'light.alpha':0.0});
+
+    sensor_doc.setFlag(MOD_NAME, ACTIVE_LIGHTS, Array.from(active));  
+    sensor_doc.data.flags.lasers.active_lights = Array.from(active);
+
+    let macro_name = sensor_doc.getFlag(MOD_NAME, MACRO_NAME);
+    let macro = game.macros.getName(macro_name);
+    if (macro){
+        macro.execute({token:sensor, light_count:active.size});
     }
-  }
 
-  sensor_doc.setFlag(MOD_NAME, ACTIVE_LIGHTS, Array.from(active));  
-  sensor_doc.data.flags.lasers.active_lights = Array.from(active);
-
-  let macro_name = sensor_doc.getFlag(MOD_NAME, MACRO_NAME);
-  let macro = game.macros.getName(macro_name);
-  if (macro){
-    macro.execute({token:sensor, light_count:active.size});
-  }
-
-  let p = sensor.center;
-  let opts = { tokens: Array.from(active).map(i=>canvas.tokens.get(i)), method: "lasers sensor", pt: p};
-  // Trigger Monks Active Tiles:
-  let tiles = canvas.scene.tiles.filter(t=>t.object.bounds.contains(p.x, p.y));
-  tiles = tiles.filter(t=>t.data.flags['monks-active-tiles']?.active);
-  try{
-    tiles.map(t=>t.trigger(opts));
-  }catch (err){
-    console.error("Failed triggering Monks Tile from sensor:", err);
-  }
+    let p = sensor.center;
+    let opts = { tokens: Array.from(active).map(i=>canvas.tokens.get(i)), method: "lasers sensor", pt: p};
+    
+    // Trigger Monks Active Tiles:
+    let tiles = canvas.scene.tiles.filter(t=>t.object.bounds.contains(p.x, p.y));
+    tiles = tiles.filter(t=>t.data.flags['monks-active-tiles']?.active);
+    try{
+        tiles.map(t=>t.trigger(opts));
+    }catch (err){
+        console.error("Failed triggering Monks Tile from sensor:", err);
+    }
 }
 
 
