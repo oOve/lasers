@@ -290,7 +290,7 @@ function changeSensor(sensor, lamp_id, add=true){
     }
 
     let p = sensor.center;
-    let opts = { tokens: Array.from(active).map(i=>canvas.tokens.get(i)), method: "lasers sensor", pt: p};
+    let opts = { tokens: Array.from(active).map(i=>canvas.tokens.get(i).document), method: "lasers sensor", pt: p};
     
     // Trigger Monks Active Tiles:
     let tiles = canvas.scene.tiles.filter(t=>t.object.bounds.contains(p.x, p.y));
