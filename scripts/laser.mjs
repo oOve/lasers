@@ -290,7 +290,7 @@ function changeSensor(sensor, lamp_id, add=true){
     }
 
     let p = sensor.center;
-    let opts = { tokens: Array.from(active).map(i=>canvas.tokens.get(i).document), method: "lasers sensor", pt: p};
+    let opts = { tokens: Array.from(active).map(i=>canvas.tokens.get(i)?.document), method: "lasers sensor", pt: p};
     
     // Trigger Monks Active Tiles:
     let tiles = canvas.scene.tiles.filter(t=>t.object.bounds.contains(p.x, p.y));
@@ -603,7 +603,7 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
        change?.flags?.lasers?.is_lamp ||
        change?.flags?.lasers?.is_mirror ||
        change?.flags?.lasers?.is_prism
-  ){  
+  ){
     if (token.getFlag(MOD_NAME, IS_LAMP)){
       updateLamp(canvas.tokens.get(token.id), change);
     }
