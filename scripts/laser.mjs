@@ -440,7 +440,7 @@ async function updateLamp(lamp, change){
   // Update its wall
   if (change){
     updateBackWall(lamp);
-  }  
+  }
  
   if(lamp.data.light.angle==360){
     lamp.document.update({light:laser_light});
@@ -460,8 +460,10 @@ async function updateLamp(lamp, change){
   let dg = (game.settings.get(MOD_NAME, "debug"))?canvas.controls.debug:null;
   dg?.clear();
   dg?.lineStyle(1, 0x00FFFF, 1.0).beginFill(0x00FFFF, 0.5);
-  // Lets trace  
-  traceLight(lamp, start, dir, chain, lights, sensors, dg);
+  // Lets trace
+  if (lamp.document.getFlag(MOD_NAME, IS_LAMP)){
+    traceLight(lamp, start, dir, chain, lights, sensors, dg);
+  }
   // End trace
   dg?.endFill();
 
@@ -588,15 +590,35 @@ Hooks.on('pasteToken', (copied, createData)=>{
 // Let's grab those token updates
 Hooks.on('updateToken', (token, change, options, user_id)=>{
   if (!game.user.isGM)return true;
-    
-  if ( (change?.flags?.lasers) && // Laser is included in this update
-       (!token.data.flags?.lasers?.is_mirror) &&  // All of mirror
-       (!token.data.flags?.lasers?.is_lamp)   &&  // lamp and
-       (!token.data.flags?.lasers?.is_prism)  &&  // prism is unset
-       token.getFlag(MOD_NAME, BACK_WALL) ){ // and we still have a back wall
-         token.setFlag(MOD_NAME, BACK_WALL, null);  // unset it, and delete it
-         canvas.scene.deleteEmbeddedDocuments('Wall', token.getFlag(MOD_NAME, BACK_WALL));
-       }
+  
+  //console.error( change );
+
+  // Did we turn off a lamp  
+  if (change.flags?.lasers?.is_lamp === false){
+    console.error("We turned OFF a lamp!", token);
+    //let lights = token.getFlag(MOD_NAME, LIGHTS);
+    //if (lights) canvas.scene.deleteEmbeddedDocuments('AmbientLight', lights);
+    //token.update({'light.alpha': 0.0, 'flags.lasers.lights': []});
+    token.update({'light.alpha': 0.0});
+    updateLamp(token.object, change);
+  }
+  // Did we turn on a lamp?
+  if (change.flags?.lasers?.is_lamp === true){
+    console.error("We turned ON a lamp!", token);
+    token.update({'light.alpha':0.5}).then(()=>updateLamp(token.object, change));
+  }
+  
+
+  // Is this "type" disabled
+  if (change.flags?.lasers?.is_lamp   === false ||
+      change.flags?.lasers?.is_prism  === false ||
+      change.flags?.lasers?.is_mirror === false  ){
+    // We turned off a mirror, lamp or prism
+    let walls = token.getFlag(MOD_NAME, BACK_WALL);
+    token.setFlag(MOD_NAME, BACK_WALL, null).then(()=>canvas.scene.deleteEmbeddedDocuments('Wall', walls));
+  }
+
+
 
   if ( isChangeTransform(change) || 
        hasProperty(options, 'lights_affected')||
@@ -605,13 +627,13 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
        change?.flags?.lasers?.is_prism
   ){
     if (token.getFlag(MOD_NAME, IS_LAMP)){
+      console.warn("Updating LAMP");
       updateLamp(canvas.tokens.get(token.id), change);
     }
     if (token.getFlag(MOD_NAME, IS_MIRROR)||token.getFlag(MOD_NAME, IS_PRISM) ){
       updateMirror(canvas.tokens.get(token.id), change, options);
     }
   }
-
 });
 
 
