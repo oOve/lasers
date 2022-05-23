@@ -43,6 +43,16 @@ The sensor can also trigger Monks Active tiles. The sensor will trigger all Acti
 
 Both the light source and the mirrors create a small wall behind them. This wall will be rotated and moved along with the token (and deleted when the token is deleted). It may happen that these walls are left behind, in that case, manually delete them.
 
+### Macro's
+To turn on/off lamps, use the following:
+```JS
+for (let lamp of canvas.tokens.controlled){
+  let on = lamp.document.getFlag('lasers', 'is_lamp');
+  lamp.document.setFlag('lasers', 'is_lamp', !on);
+}
+```
+This macro will toggle on/off the laser on the currently selected tokens.
+
 ## TODO:
  * Probably bug-fixing, still some issues with copying and pasting objects. Also interacting too fast with the lights can introduce some un-intended race conditions.
 
