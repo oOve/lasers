@@ -25,7 +25,7 @@ const BACK_WALL     = 'back_wall';
 const RAY_CHAIN     = 'ray_chain';
 const MACRO_NAME    = 'macro_name';
 const LIGHTS        = 'lights';
-
+const WAS_LAMP      = 'was_lamp';
 
 /**
  * @typedef {Object} Vec2
@@ -283,10 +283,13 @@ function changeSensor(sensor, lamp_id, add=true){
     sensor_doc.setFlag(MOD_NAME, ACTIVE_LIGHTS, Array.from(active));  
     sensor_doc.data.flags.lasers.active_lights = Array.from(active);
 
-    let macro_name = sensor_doc.getFlag(MOD_NAME, MACRO_NAME);
+    let macro_name = sensor_doc.getFlag(MOD_NAME, MACRO_NAME);    
     let macro = game.macros.getName(macro_name);
+    if (macro_name && !macro){
+      ui.notifications.warn(MOD_NAME+": Failed to find macro:" + macro_name);
+    }
     if (macro){
-        macro.execute({token:sensor, light_count:active.size});
+      macro.execute({token:sensor, light_count:active.size});
     }
 
     let p = sensor.center;
@@ -339,7 +342,7 @@ function traceLight(token, start, dir, chain, lights, sensors, dg=null){
     if (canvas.walls.checkCollision(nray, {type:'sight'})){
       // console.log( "Hit a wall, aborting");
       dg?.drawCircle(nray.B.x, nray.B.y, 16);
-      break;      
+      break;
     }
     
     // We haven't hit a wall, yet
@@ -442,7 +445,7 @@ async function updateLamp(lamp, change){
     updateBackWall(lamp);
   }
  
-  if(lamp.data.light.angle==360){
+  if(lamp.data.light.angle==360 && !(change.flags?.lasers?.is_lamp === false)){
     lamp.document.update({light:laser_light});
   }
 
@@ -534,7 +537,9 @@ Hooks.on('deleteToken', (token, options, user_id)=>{
   let is_prism= token.getFlag(MOD_NAME, IS_PRISM);
   if (is_lamp||is_mirr||is_prism){
       let bcw = token.getFlag(MOD_NAME, BACK_WALL);
-      if (bcw){canvas.scene.deleteEmbeddedDocuments("Wall", bcw);}
+      if (bcw){
+        canvas.scene.deleteEmbeddedDocuments("Wall", bcw);
+      }
 
       if (is_lamp){
         let lights = token.getFlag(MOD_NAME, LIGHTS);
@@ -594,17 +599,18 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
   //console.error( change );
 
   // Did we turn off a lamp  
-  if (change.flags?.lasers?.is_lamp === false){
-    console.error("We turned OFF a lamp!", token);
-    //let lights = token.getFlag(MOD_NAME, LIGHTS);
+  if (change.flags?.lasers?.is_lamp === false && token.getFlag(MOD_NAME, WAS_LAMP) === true){
+    //console.error("We turned OFF a lamp!", token);
+    token.setFlag(MOD_NAME,WAS_LAMP, false);
     //if (lights) canvas.scene.deleteEmbeddedDocuments('AmbientLight', lights);
     //token.update({'light.alpha': 0.0, 'flags.lasers.lights': []});
-    token.update({'light.alpha': 0.0});
+    token.update({'light.alpha': 0.0});    
     updateLamp(token.object, change);
   }
   // Did we turn on a lamp?
-  if (change.flags?.lasers?.is_lamp === true){
-    console.error("We turned ON a lamp!", token);
+  if (change.flags?.lasers?.is_lamp === true && !token.getFlag(MOD_NAME, WAS_LAMP)){
+    //console.error("We turned ON a lamp!", token);
+    token.setFlag(MOD_NAME, WAS_LAMP, true);
     token.update({'light.alpha':0.5}).then(()=>updateLamp(token.object, change));
   }
   
@@ -627,7 +633,7 @@ Hooks.on('updateToken', (token, change, options, user_id)=>{
        change?.flags?.lasers?.is_prism
   ){
     if (token.getFlag(MOD_NAME, IS_LAMP)){
-      console.warn("Updating LAMP");
+      // console.warn("Updating LAMP");
       updateLamp(canvas.tokens.get(token.id), change);
     }
     if (token.getFlag(MOD_NAME, IS_MIRROR)||token.getFlag(MOD_NAME, IS_PRISM) ){
