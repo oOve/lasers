@@ -336,7 +336,7 @@ function traceLight(token, start, dir, chain, lights, sensors, dg=null){
     // Lets push it to the chain
     chain.push(coord2uv(nray.B.x, nray.B.y));
     
-    if (canvas.walls.checkCollision(nray)){
+    if (canvas.walls.checkCollision(nray, {type:'sight'})){
       // console.log( "Hit a wall, aborting");
       dg?.drawCircle(nray.B.x, nray.B.y, 16);
       break;      
