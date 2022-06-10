@@ -653,14 +653,27 @@ Hooks.once("init", () => {
     scope: 'world',
     config: true,
     type: Number,
-    default: 100
+    default: 150
   });
   
+  // Ray width
+  game.settings.register(MOD_NAME, "ray_width", {
+    name: lang('width'),
+    hint: lang('width_hint'),
+    scope: 'world',
+    config: true,
+    type: Number,
+    default: 0.6
+  });
+
   
 
   libWrapper.register('lasers', 'ClockwiseSweepPolygon.create', function(wrapped, ...args) {
     // Get the wrapped output
     let los = wrapped(...args);
+    
+    let rw = game.settings.get(MOD_NAME, 'ray_width');
+    let width = 0.5 * rw * canvas.grid.size;
     
     // If this is a laser, modify the output
     if ((args[1].source?.object?.data?.flags?.lasers?.is_laser)||
@@ -669,8 +682,8 @@ Hooks.once("init", () => {
       let rot = args[1].rotation;
       let rr = Math.toRadians(rot);
       let p = {
-        x:50*Math.cos(rr), 
-        y:50*Math.sin(rr)
+        x:width*Math.cos(rr), 
+        y:width*Math.sin(rr)
       };
       
       let new_points = [];
