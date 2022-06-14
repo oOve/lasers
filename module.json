@@ -11,7 +11,10 @@
       "discord": "Ove#4315",
       "patreon": "https://www.patreon.com/drO_o"
     }],
-    "dependencies":[{"name": "lib-wrapper"}],
+    "dependencies":[{
+        "name": "lib-wrapper",
+        "type": "module"
+      }],
     "socket": false,
     "esmodules": ["./scripts/laser.mjs"],    
     "url": "https://github.com/oOve/lasers",
