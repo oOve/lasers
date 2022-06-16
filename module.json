@@ -15,6 +15,9 @@
         "name": "lib-wrapper",
         "type": "module"
       }],
+    "relationships": {
+        "requires": [{"id":"lib-wrapper", "type":"module"}]
+      },
     "socket": false,
     "esmodules": ["./scripts/laser.mjs"],    
     "url": "https://github.com/oOve/lasers",
