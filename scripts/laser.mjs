@@ -158,11 +158,13 @@ async function updateBackWall(token){
   // Porting old id's where we only had one
   //back_wall_ids = ?[back_wall_ids]:back_wall_ids;
 
-  let pos  = new utils.Vec2(doc.data.x, doc.data.y);
-  let size = new utils.Vec2(token.data.width*canvas.grid.size, token.data.height*canvas.grid.size);
+  let pos  = new utils.Vec2(doc.x, doc.y);
+  let size = new utils.Vec2(token.w, token.h);
  
-  let rn = Math.toRadians(-token.data.rotation);
-  // The mirrors N vec
+  let rn = Math.toRadians(-token.document.rotation);
+  //let rn = -token.mesh.rotation;
+
+  // The wall-holders N vec
   let m_nvec = new utils.Vec2( Math.sin(rn), Math.cos(rn));
 
   let walls = [];  
@@ -173,7 +175,7 @@ async function updateBackWall(token){
   //-90 degrees roated
   let p2 = new utils.Vec2( m_nvec.y, -m_nvec.x);
   
-  let offset = -0.1*size.x;
+  let offset = -0.25*size.x;
   if (is_prism){
     offset = .3*size.x;
     let q1 = center.added(m_nvec.scaled( 0.3*size.x));
@@ -232,7 +234,7 @@ function updateMirror(token, change, options){
 
     if (hasProperty(change, 'rotation')){
         // Update the tokens document to match the current change
-        token.document.data.rotation = change.rotation;
+        token.document.rotation = change.rotation;
     }
     // Check which ligths are affected by this movement
     let lights_affected = checkMirrorsMove(token.center);
@@ -268,20 +270,20 @@ function changeSensor(sensor, lamp_id, add=true){
     let active = new Set(sensor_doc.getFlag(MOD_NAME, ACTIVE_LIGHTS));
     if (add){
         // If our size is zero, and we add one, we "turn on" its light.
-        if (active.size==0 && sensor.data.light.alpha==0){
+        if (active.size==0 && sensor.document.light.alpha==0){
             sensor_doc.update({'light.alpha':0.8});
         }
         active.add(lamp_id);
     }else{
         active.delete(lamp_id);
         // If the active lights are down to zero (after removing the one) we "turn off" the sensors light
-        if (active.size == 0 && sensor.data.light.alpha>0){
+        if (active.size == 0 && sensor.document.light.alpha>0){
             sensor_doc.update({'light.alpha':0.0});
         }
     }
 
     sensor_doc.setFlag(MOD_NAME, ACTIVE_LIGHTS, Array.from(active));  
-    sensor_doc.data.flags.lasers.active_lights = Array.from(active);
+    sensor_doc.flags.lasers.active_lights = Array.from(active);
 
     let macro_name = sensor_doc.getFlag(MOD_NAME, MACRO_NAME);    
     let macro = game.macros.getName(macro_name);
@@ -296,12 +298,13 @@ function changeSensor(sensor, lamp_id, add=true){
     let opts = { tokens: Array.from(active).map(i=>canvas.tokens.get(i)?.document), method: "lasers sensor", pt: p};
     
     // Trigger Monks Active Tiles:
-    let tiles = canvas.scene.tiles.filter(t=>t.object.bounds.contains(p.x, p.y));
-    tiles = tiles.filter(t=>t.data.flags['monks-active-tiles']?.active);
+    let tiles = canvas.primary.tiles.filter(t=>t.object.bounds.contains(p.x, p.y));
+    tiles = tiles.filter(t=>t.document.flags['monks-active-tiles']?.active);
     try{
-        tiles.map(t=>t.trigger(opts));
+        tiles.map(t=>t.document.trigger(opts));
     }catch (err){
-        console.error("Failed triggering Monks Tile from sensor:", err);
+        console.error("Failed triggering Monks Tile from sensor:", tiles);
+        console.error(err);
     }
 }
 
@@ -320,7 +323,7 @@ function changeSensor(sensor, lamp_id, add=true){
 function traceLight(token, start, dir, chain, lights, sensors, dg=null){
     
   let gs = canvas.grid.size;
-  let step = gs*0.66;
+  let step = gs*2/3;
   const MAX_CHAIN = game.settings.get(MOD_NAME, "ray_length");
 
     
@@ -339,9 +342,13 @@ function traceLight(token, start, dir, chain, lights, sensors, dg=null){
     // Lets push it to the chain
     chain.push(coord2uv(nray.B.x, nray.B.y));
     
-    if (canvas.walls.checkCollision(nray, {type:'sight'})){
+    if (canvas.walls.checkCollision(nray, {type:'sight', mode:'any'})){
       // console.log( "Hit a wall, aborting");
+      dg?.lineStyle(1, 0x00FF00, 3.0).beginFill(0xFF0000, 0.5);
       dg?.drawCircle(nray.B.x, nray.B.y, 16);
+      dg?.lineStyle(1, 0x00FFFF, 1.0).beginFill(0x00FFFF, 0.5);
+      
+      
       break;
     }
     
@@ -375,7 +382,8 @@ function traceLight(token, start, dir, chain, lights, sensors, dg=null){
       let is_mirror = tkp.document.getFlag(MOD_NAME, IS_MIRROR);
 
       // We found a mirror, or a prism
-      let rn = Math.toRadians(-tkp.data.rotation);
+      //let rn = Math.toRadians(-tkp.data.rotation);
+      let rn = -tkp.mesh.rotation;
       // The N vec
       let m_nvec =  {x:Math.sin(rn), y:Math.cos(rn)};
       
@@ -445,7 +453,7 @@ async function updateLamp(lamp, change){
     updateBackWall(lamp);
   }
  
-  if(lamp.data.light.angle==360 && !(change.flags?.lasers?.is_lamp === false)){
+  if(lamp.document.light.angle==360 && !(change.flags?.lasers?.is_lamp === false)){
     lamp.document.update({light:laser_light});
   }
 
@@ -453,7 +461,8 @@ async function updateLamp(lamp, change){
   // Starting point at the center of the lamp
   let start = lamp.center;
   // Its rotation in radians
-  let r = Math.toRadians(-lamp.data.rotation);
+  //let r = Math.toRadians(-lamp.data.rotation);
+  let r = -lamp.mesh.rotation;
   // Its normalized direction vector
   let dir = {x:Math.sin(r), y:Math.cos(r)};
 
@@ -493,7 +502,7 @@ async function updateLamp(lamp, change){
  
   // Replace mirror lights with this lamps settings.
   for (let l of lights){
-    l.light = duplicate(lamp.data.light);
+    l.light = duplicate(lamp.document.light);
     l.config = l.light;
     if (l.flags == undefined){l.flags = {};}
     if(l.flags.lasers==undefined){l.flags.lasers={};};
@@ -519,7 +528,7 @@ Hooks.on('preUpdateToken', (token, change, options, user_id)=>{
   let sz2 = canvas.grid.size/2;
   // We need to also notify change if a mirror moves out of an 'active' ray  
   if ( (is_mirr || is_prism) && isChangeTransform(change)){
-    let pos = {x:token.data.x+sz2, y:token.data.y+sz2};
+    let pos = {x:token.x+sz2, y:token.y+sz2};
     let lights_affected = checkMirrorsMove(pos);    
     if (lights_affected.size){
       options.lights_affected = Array.from(lights_affected);
@@ -563,7 +572,7 @@ Hooks.on('createToken', (token, options, user_id)=>{
     updateBackWall(token);
     // Check for default settings.
     if (is_lamp){
-      if (token.data.light.angle == 360){
+      if (token.document.light.angle == 360){
         console.log("Creating light, found default light settings(360 degrees), replacing with 'laser settings'");        
         token.update({ 
           light:laser_light,
@@ -663,7 +672,12 @@ Hooks.once("init", () => {
     scope: 'world',
     config: true,
     type: Number,
-    default: 0.6
+    default: 0.6,
+    range: {
+      min: 0.05,
+      max: 1.5,
+      step: 0.05
+    }
   });
 
   
@@ -676,8 +690,8 @@ Hooks.once("init", () => {
     let width = 0.5 * rw * canvas.grid.size;
     
     // If this is a laser, modify the output
-    if ((args[1].source?.object?.data?.flags?.lasers?.is_laser)||
-        (args[1].source?.object?.data?.flags?.lasers?.is_lamp) ){
+    if ((args[1].source?.object?.document?.flags?.lasers?.is_laser)||
+        (args[1].source?.object?.document?.flags?.lasers?.is_lamp) ){
       //console.log("Wrapped method los 'create' intercepted.");
       let rot = args[1].rotation;
       let rr = Math.toRadians(rot);
@@ -691,22 +705,31 @@ Hooks.once("init", () => {
       let p2 = utils.vAdd(los.origin, p);
       new_points.push(p1);
       new_points.push(p2);
-      for (let i = 2; i< los.points.length-2; i+=2){
-        new_points.push({x: los.points[i],
-                         y: los.points[i+1]});
-      }
 
-      let angles = new_points.map((p)=>{90-utils.vAngle( utils.vSub(p, los.origin) ) });
-      
-      // sort points by angles
-      let sorted_points = utils.dsu(new_points, angles);
+      const side = utils.vSub(p1,p2);
+      const PD = {x:-p.y*9000, y:p.x*9000};
+      const SSTEPS = 10;
+      for (let i=0; i < SSTEPS; ++i){
+        let step = utils.vAdd(p2, utils.vMult(side, i/(SSTEPS-1)));
+        let proj = utils.vAdd(step, PD);
+        let r = new Ray(step, proj);
+        let c = canvas.walls.checkCollision(r, {type:"light", mode:"first"});
+        if (c==null){
+          new_points.push(proj);          
+        }
+        else{
+          new_points.push(c);
+        }
+      }
+     
+      let sorted_points = new_points;
+
       // flatten points
       let res_points = [];
       for (let p of sorted_points) {
         res_points.push(p.x);res_points.push(p.y);
       }
-      los.points = res_points;
-    
+      los.points = res_points;    
     }
 
     // Return the potentially changed output
@@ -723,35 +746,6 @@ Hooks.once("init", () => {
     default: false
   });  
 
-
-  /*
-  game.settings.register(MOD_NAME, "activate_MATT", {
-    name: lang('matt'),
-    hint: lang('matt_hint'),
-    scope: 'world',
-    config: true,
-    type: Boolean,
-    default: true
-  });  
-  game.settings.register(MOD_NAME, MULTI_LIGHT_MODEL, {
-    name: lang('multi_light_model'),
-    hint: lang('multi_light_model_hint'),
-    scope: 'world',
-    config: true,
-    type: Boolean,
-    default: false
-  });*/
-
-  /*
-  game.settings.register(MOD_NAME, "dual_lights", {
-    name: "Dual Lights",
-    hint: "Create light sources in 'both' directions, looks better, but can in some cases create artifacts",
-    scope: 'world',
-    config: true,
-    type: Boolean,
-    default: true
-  });
-  */
 });
 
 
@@ -761,7 +755,7 @@ function createCheckBox(app, fields, data_name, title, hint){
   const label = document.createElement('label');
   label.textContent = title; 
   const input = document.createElement("input");
-  input.name = 'flags.'+MOD_NAME+'.' + data_name;
+  input.name = ['flags',MOD_NAME,data_name].join('.');
   input.type = "checkbox";
   input.title = hint;
   
@@ -816,7 +810,6 @@ Hooks.on("renderTokenConfig", (app, html) => {
   let mn = app.token.getFlag(MOD_NAME, 'macro_name');  
   mname.value = (mn)?mn:"";
   formFields.append(mname);
-
 
   // Add the form group to the bottom of the Identity tab
   html[0].querySelector("div[data-tab='character']").append(formGroup);

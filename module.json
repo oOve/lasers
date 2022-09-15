@@ -1,10 +1,11 @@
 {
-    "name": "lasers",
+    "id": "lasers",
     "title": "Lasers and Lightbeams",
     "description": "Adds lightbeams that can be reflected off mirrors, or colored by glass",
     "version": "1.6.8",
-    "minimumCoreVersion": "9",
-    "compatibleCoreVersion": "9",
+    "compatibility": {
+      "minimum": "10",
+      "verified": "10"},
     "author": "o_Ove",
 	  "authors": [{
       "name": "o_Ove",
@@ -12,7 +13,7 @@
       "patreon": "https://www.patreon.com/drO_o"
     }],
     "dependencies":[{
-        "name": "lib-wrapper",
+        "id": "lib-wrapper",
         "type": "module"
       }],
     "relationships": {
@@ -42,8 +43,10 @@
         "name": "lasers",
         "label": "Laser Props",
         "path": "./packs/lasers.db",
-        "type": "Actor"
+        "type": "Actor",
+        "system": "dnd5e"
       }
     ],
-    "library": false
+    "library": false,
+    "minimumCoreVersion": 10
   }
