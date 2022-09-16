@@ -93,6 +93,12 @@ function reflect(vec, norm){
 }
 
 
+
+function isMirror(o){
+
+}
+
+
 function isString(val){
     return (typeof val === 'string' || val instanceof String);
 }
@@ -124,30 +130,6 @@ async function mergeDocuments(token, docs, type, type_id ){
     }
 }
 
-/*
-async function mergeDocuments(token, docs, type, type_id ){
-    let old_ids = token.getFlag(MOD_NAME, type_id);
-    old_ids = isString(old_ids)?[old_ids]:old_ids;
-    old_ids = (old_ids)?old_ids:[];
-    let diff = docs.length - old_ids.length;
-    if (diff>0){
-        let res = await canvas.scene.createEmbeddedDocuments(type, docs.splice(-diff));
-        let nudoc = old_ids.concat(res.map(t=>t.id));
-        await token.setFlag(MOD_NAME, type_id, nudoc);
-    }else if (diff<0){
-        await canvas.scene.deleteEmbeddedDocuments(type, old_ids.splice(diff));
-        token.flags.lasers[type_id] = old_ids;
-        await token.setFlag(MOD_NAME, type_id, old_ids);
-    }
-    // Re-use old id's
-    for (let i=0; i < docs.length; ++i){
-        docs[i]._id = old_ids[i];
-    }
-    if (docs.length){
-        await canvas.scene.updateEmbeddedDocuments(type, docs, {animate:false});
-    }
-}
-*/
 
 
 async function updateBackWall(token){
@@ -223,6 +205,7 @@ function checkMirrorsMove(pos){
   return lights_affected;
 }
 
+
 /**
  * Update a given mirror.
  * @param {*} token The token representing the mirror
@@ -247,6 +230,7 @@ function updateMirror(token, change, options){
         updateLamp(l);
     }
 }
+
 
 /**
  * Convert from canvas coords to grid cell coords
@@ -817,4 +801,4 @@ Hooks.on("renderTokenConfig", (app, html) => {
   // Set the apps height correctly
   app.setPosition();
 });
-//*/
+
